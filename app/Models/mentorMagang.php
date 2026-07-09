@@ -14,4 +14,9 @@ class mentorMagang extends Model
     {
         return $this->belongsTo(Divisi::class); 
     }
+
+    public function peserta()
+    {
+        return $this->hasMany(pesertaMagang::class, 'mentor_magang_id');
+    }
 }

@@ -21,4 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Rute Absensi
     Route::post('/absensi', [AbsensiController::class, 'store']);
+
+    // Rute Mentor
+    Route::get('/mentor/peserta', [\App\Http\Controllers\Api\MentorController::class, 'getPesertaAbsensi']);
 });
