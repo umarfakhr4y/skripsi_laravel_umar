@@ -46,4 +46,37 @@ class MentorController extends Controller
             'data' => $data
         ]);
     }
+
+    public function getLaporanHarian(Request $request)
+    {
+        $user = $request->user();
+        
+        // Ensure user is a mentor
+        $mentor = mentorMagang::where('user_id', $user->id)->first();
+        if (!$mentor) {
+            return response()->json(['success' => false, 'message' => 'Hanya mentor yang dapat mengakses data ini.'], 403);
+        }
+
+        // Fetch all daily reports for this mentor's participants
+        $laporan = \App\Models\LaporanHarian::with(['peserta'])
+            ->where('mentor_magang_id', $mentor->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $data = $laporan->map(function ($lap) {
+            return [
+                'id' => $lap->id,
+                'peserta_id' => $lap->peserta_magang_id,
+                'nama_peserta' => $lap->peserta ? $lap->peserta->nama_lengkap : 'Tanpa Nama',
+                'laporan' => $lap->laporan,
+                'komentar_mentor' => $lap->komentar_mentor,
+                'tanggal' => $lap->created_at ? $lap->created_at->format('Y-m-d H:i:s') : null
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
 }
