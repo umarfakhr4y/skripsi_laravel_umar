@@ -16,13 +16,26 @@ class UserResource extends JsonResource
     {
         $profileData = $this->role === 'peserta' ? $this->peserta : $this->mentor;
 
-        // Jika dia mentor, kita sertakan data divisinya
-        
+        $sudahAbsen = false;
+        $dataAbsenHariIni = null;
+
+        if ($this->role === 'peserta' && $this->peserta) {
+            $absen = \App\Models\Absensi::where('peserta_magang_id', $this->peserta->id)
+                            ->where('tanggal', \Carbon\Carbon::now()->toDateString())
+                            ->first();
+            
+            if ($absen) {
+                $sudahAbsen = true;
+                $dataAbsenHariIni = $absen;
+            }
+        }
 
         return [
             'id'         => $this->id,
             'email'      => $this->email,
             'role'       => $this->role,
+            'sudah_absen'=> $sudahAbsen,
+            'absen_hari_ini' => $dataAbsenHariIni,
             'data'       => $profileData,
         ];
     }

@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\AbsensiController;
 use App\Http\Resources\UserResource;
 
 //login awal
@@ -17,4 +18,7 @@ Route::middleware('auth:sanctum')->group(function () {
         $user = $request->user()->load(['peserta', 'mentor.divisi']);
         return new UserResource($user);
     });
+    
+    // Rute Absensi
+    Route::post('/absensi', [AbsensiController::class, 'store']);
 });
