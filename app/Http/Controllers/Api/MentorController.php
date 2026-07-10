@@ -113,4 +113,47 @@ class MentorController extends Controller
             'data' => $data
         ]);
     }
+
+    public function storeEvaluasiBulanan(Request $request)
+    {
+        $user = $request->user();
+        
+        $mentor = mentorMagang::where('user_id', $user->id)->first();
+        if (!$mentor) {
+            return response()->json(['success' => false, 'message' => 'Hanya mentor yang dapat mengirim evaluasi.'], 403);
+        }
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'peserta_magang_id' => 'required|exists:peserta_magangs,id',
+            'produktivitas' => 'required|integer|min:1|max:5',
+            'komunikasi' => 'required|integer|min:1|max:5',
+            'keahlian_teknis' => 'required|integer|min:1|max:5',
+            'feedback' => 'required|string',
+            'bulan_tahun' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $evaluasi = \App\Models\EvaluasiBulanan::create([
+            'peserta_magang_id' => $request->peserta_magang_id,
+            'mentor_magang_id' => $mentor->id,
+            'produktivitas' => $request->produktivitas,
+            'komunikasi' => $request->komunikasi,
+            'keahlian_teknis' => $request->keahlian_teknis,
+            'feedback' => $request->feedback,
+            'bulan_tahun' => $request->bulan_tahun,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Evaluasi bulanan berhasil disimpan',
+            'data' => $evaluasi
+        ], 201);
+    }
 }
