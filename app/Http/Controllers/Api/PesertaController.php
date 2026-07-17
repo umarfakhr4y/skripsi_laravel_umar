@@ -46,7 +46,7 @@ class PesertaController extends Controller
                 'keahlian_teknis' => $item->keahlian_teknis,
                 'tanggal' => $item->created_at->format('d M Y'),
                 'mentor' => [
-                    'nama' => $item->mentor->user->name ?? 'Unknown',
+                    'nama' => $item->mentor->nama_lengkap ?? 'Unknown',
                     'jabatan' => 'Mentor Senior • ' . ($item->mentor->divisi->nama_divisi ?? 'Umum'),
                 ]
             ];
@@ -55,6 +55,89 @@ class PesertaController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Berhasil mengambil data evaluasi bulanan',
+            'data' => $formattedData
+        ], 200);
+    }
+
+    public function storeBimbingan(Request $request)
+    {
+        $user = $request->user();
+
+        $peserta = \App\Models\pesertaMagang::where('user_id', $user->id)->first();
+        if (!$peserta) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak.'
+            ], 403);
+        }
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'tanggal' => 'required|date',
+            'topik' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        if (!$peserta->mentor_magang_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda belum memiliki mentor.'
+            ], 400);
+        }
+
+        $bimbingan = \App\Models\Bimbingan::create([
+            'peserta_magang_id' => $peserta->id,
+            'mentor_magang_id' => $peserta->mentor_magang_id,
+            'tanggal' => $request->tanggal,
+            'topik' => $request->topik,
+            'status' => 'menunggu'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Berhasil mengajukan bimbingan',
+            'data' => $bimbingan
+        ], 201);
+    }
+
+    public function getRiwayatBimbingan(Request $request)
+    {
+        $user = $request->user();
+
+        $peserta = \App\Models\pesertaMagang::where('user_id', $user->id)->first();
+        if (!$peserta) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak.'
+            ], 403);
+        }
+
+        $bimbingans = \App\Models\Bimbingan::where('peserta_magang_id', $peserta->id)
+            ->with(['mentor.user'])
+            ->orderBy('tanggal', 'desc')
+            ->get();
+
+        $formattedData = $bimbingans->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'tanggal' => \Carbon\Carbon::parse($item->tanggal)->format('d M Y'),
+                'topik' => $item->topik,
+                'status' => $item->status,
+                'mentor' => [
+                    'nama' => $item->mentor->nama_lengkap ?? 'Unknown',
+                ]
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Berhasil mengambil data riwayat bimbingan',
             'data' => $formattedData
         ], 200);
     }
