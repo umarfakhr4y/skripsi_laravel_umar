@@ -169,4 +169,51 @@ class MentorController extends Controller
             'data' => $evaluasi
         ], 201);
     }
+
+    public function getRiwayatEvaluasi(Request $request, $peserta_id = null)
+    {
+        $user = $request->user();
+        
+        $mentor = mentorMagang::where('user_id', $user->id)->first();
+        if (!$mentor) {
+            return response()->json(['success' => false, 'message' => 'Hanya mentor yang dapat mengakses data ini.'], 403);
+        }
+
+        $query = \App\Models\EvaluasiBulanan::where('mentor_magang_id', $mentor->id)
+                    ->with('peserta.user')
+                    ->orderBy('created_at', 'desc');
+
+        if ($peserta_id) {
+            $query->where('peserta_magang_id', $peserta_id);
+        }
+
+        $evaluasi = $query->get();
+
+        $formattedData = $evaluasi->map(function ($item) {
+            $totalRating = $item->produktivitas + $item->komunikasi + $item->keahlian_teknis;
+            $ratingAkhir = round($totalRating / 3, 1);
+
+            return [
+                'id' => $item->id,
+                'bulan_tahun' => $item->bulan_tahun,
+                'rating_akhir' => $ratingAkhir,
+                'feedback' => $item->feedback,
+                'produktivitas' => $item->produktivitas,
+                'komunikasi' => $item->komunikasi,
+                'keahlian_teknis' => $item->keahlian_teknis,
+                'tanggal' => $item->created_at->format('d M Y'),
+                'peserta' => [
+                    'id' => $item->peserta->id ?? null,
+                    'nama' => $item->peserta->nama_lengkap ?? 'Unknown',
+                    'nim' => $item->peserta->nim ?? '-',
+                ]
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Berhasil mengambil riwayat evaluasi',
+            'data' => $formattedData
+        ], 200);
+    }
 }
