@@ -27,8 +27,20 @@ class MentorController extends Controller
         }])->get();
 
         // Format the data
-        $data = $peserta->map(function ($p) {
+        $data = $peserta->map(function ($p) use ($mentor) {
             $absensi_hari_ini = $p->absensi->first();
+            
+            // Cek apakah sudah dievaluasi bulan ini
+            $months = [
+                'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 
+                'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
+            ];
+            $bulanTahun = $months[Carbon::now()->month - 1] . ' ' . Carbon::now()->year;
+            $sudahDievaluasi = \App\Models\EvaluasiBulanan::where('peserta_magang_id', $p->id)
+                ->where('mentor_magang_id', $mentor->id)
+                ->where('bulan_tahun', $bulanTahun)
+                ->exists();
+
             return [
                 'id' => $p->id,
                 'user_id' => $p->user_id,
@@ -37,7 +49,8 @@ class MentorController extends Controller
                 'email' => $p->user ? $p->user->email : null,
                 'sudah_absen_masuk' => $absensi_hari_ini ? true : false,
                 'sudah_absen_pulang' => ($absensi_hari_ini && $absensi_hari_ini->waktu_keluar) ? true : false,
-                'absen_hari_ini' => $absensi_hari_ini
+                'absen_hari_ini' => $absensi_hari_ini,
+                'sudah_dievaluasi_bulan_ini' => $sudahDievaluasi
             ];
         });
 
