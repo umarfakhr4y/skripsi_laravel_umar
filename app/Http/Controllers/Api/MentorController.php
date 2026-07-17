@@ -216,4 +216,42 @@ class MentorController extends Controller
             'data' => $formattedData
         ], 200);
     }
+
+    public function getBimbingan(Request $request)
+    {
+        $user = $request->user();
+
+        $mentor = \App\Models\mentorMagang::where('user_id', $user->id)->first();
+        if (!$mentor) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak.'
+            ], 403);
+        }
+
+        $bimbingans = \App\Models\Bimbingan::where('mentor_magang_id', $mentor->id)
+            ->with(['peserta.user'])
+            ->orderBy('tanggal', 'desc')
+            ->get();
+
+        $formattedData = $bimbingans->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'tanggal' => \Carbon\Carbon::parse($item->tanggal)->format('d M Y'),
+                'topik' => $item->topik,
+                'status' => $item->status,
+                'peserta' => [
+                    'id' => $item->peserta->id ?? null,
+                    'nama' => $item->peserta->nama_lengkap ?? 'Unknown',
+                    'nim' => $item->peserta->nim ?? '-',
+                ]
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Berhasil mengambil data bimbingan',
+            'data' => $formattedData
+        ], 200);
+    }
 }
