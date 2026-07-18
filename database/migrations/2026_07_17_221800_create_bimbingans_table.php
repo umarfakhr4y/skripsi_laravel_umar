@@ -17,7 +17,8 @@ return new class extends Migration
             $table->unsignedBigInteger('mentor_magang_id');
             $table->date('tanggal');
             $table->text('topik');
-            $table->string('status')->default('menunggu'); // menunggu, disetujui, ditolak, selesai
+            $table->string('status')->default('requested'); // menunggu, disetujui, ditolak, selesai
+            $table->string('link_meet')->nullable();
             $table->timestamps();
 
             $table->foreign('peserta_magang_id')->references('id')->on('peserta_magangs')->onDelete('cascade');

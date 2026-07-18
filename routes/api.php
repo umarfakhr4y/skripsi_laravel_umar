@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/mentor/evaluasi', [\App\Http\Controllers\Api\MentorController::class, 'getRiwayatEvaluasi']);
     Route::get('/mentor/evaluasi/{peserta_id}', [\App\Http\Controllers\Api\MentorController::class, 'getRiwayatEvaluasi']);
     Route::get('/mentor/bimbingan', [\App\Http\Controllers\Api\MentorController::class, 'getBimbingan']);
+    Route::put('/mentor/bimbingan/{id}', [\App\Http\Controllers\Api\MentorController::class, 'updateBimbinganStatus']);
     // Rute Peserta
     Route::get('/peserta/evaluasi', [\App\Http\Controllers\Api\PesertaController::class, 'getEvaluasiBulanan']);
     Route::post('/peserta/bimbingan', [\App\Http\Controllers\Api\PesertaController::class, 'storeBimbingan']);

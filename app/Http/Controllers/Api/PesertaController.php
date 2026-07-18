@@ -96,7 +96,7 @@ class PesertaController extends Controller
             'mentor_magang_id' => $peserta->mentor_magang_id,
             'tanggal' => $request->tanggal,
             'topik' => $request->topik,
-            'status' => 'menunggu'
+            'status' => 'requested'
         ]);
 
         return response()->json([
@@ -127,8 +127,10 @@ class PesertaController extends Controller
             return [
                 'id' => $item->id,
                 'tanggal' => \Carbon\Carbon::parse($item->tanggal)->format('d M Y'),
+                'is_past' => \Carbon\Carbon::parse($item->tanggal)->startOfDay()->lt(\Carbon\Carbon::now()->startOfDay()),
                 'topik' => $item->topik,
                 'status' => $item->status,
+                'link_meet' => $item->link_meet,
                 'mentor' => [
                     'nama' => $item->mentor->nama_lengkap ?? 'Unknown',
                 ]

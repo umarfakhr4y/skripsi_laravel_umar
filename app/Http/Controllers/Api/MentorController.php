@@ -238,8 +238,10 @@ class MentorController extends Controller
             return [
                 'id' => $item->id,
                 'tanggal' => \Carbon\Carbon::parse($item->tanggal)->format('d M Y'),
+                'is_past' => \Carbon\Carbon::parse($item->tanggal)->startOfDay()->lt(\Carbon\Carbon::now()->startOfDay()),
                 'topik' => $item->topik,
                 'status' => $item->status,
+                'link_meet' => $item->link_meet,
                 'peserta' => [
                     'id' => $item->peserta->id ?? null,
                     'nama' => $item->peserta->nama_lengkap ?? 'Unknown',
@@ -252,6 +254,46 @@ class MentorController extends Controller
             'success' => true,
             'message' => 'Berhasil mengambil data bimbingan',
             'data' => $formattedData
+        ], 200);
+    }
+
+    public function updateBimbinganStatus(Request $request, $id)
+    {
+        $user = $request->user();
+        $mentor = \App\Models\mentorMagang::where('user_id', $user->id)->first();
+        
+        if (!$mentor) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak.'
+            ], 403);
+        }
+
+        $bimbingan = \App\Models\Bimbingan::where('id', $id)
+            ->where('mentor_magang_id', $mentor->id)
+            ->first();
+
+        if (!$bimbingan) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data bimbingan tidak ditemukan.'
+            ], 404);
+        }
+
+        $request->validate([
+            'status' => 'required|string',
+            'link_meet' => 'nullable|string'
+        ]);
+
+        $bimbingan->update([
+            'status' => $request->status,
+            'link_meet' => $request->has('link_meet') ? $request->link_meet : $bimbingan->link_meet
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status bimbingan berhasil diperbarui',
+            'data' => $bimbingan
         ], 200);
     }
 }
