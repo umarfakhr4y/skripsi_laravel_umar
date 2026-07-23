@@ -27,8 +27,24 @@ class MentorController extends Controller
         }])->get();
 
         // Format the data
-        $data = $peserta->map(function ($p) use ($mentor) {
+        $total_peserta = $peserta->count();
+        $sudah_clock_in = 0;
+        $sudah_laporan = 0;
+
+        $data = $peserta->map(function ($p) use ($mentor, $tanggal_hari_ini, &$sudah_clock_in, &$sudah_laporan) {
             $absensi_hari_ini = $p->absensi->first();
+            
+            // Cek apakah sudah mengisi laporan hari ini
+            $sudah_isi_laporan = \App\Models\LaporanHarian::where('peserta_magang_id', $p->id)
+                ->whereDate('created_at', $tanggal_hari_ini)
+                ->exists();
+
+            if ($absensi_hari_ini) {
+                $sudah_clock_in++;
+            }
+            if ($sudah_isi_laporan) {
+                $sudah_laporan++;
+            }
             
             // Cek apakah sudah dievaluasi bulan ini
             $months = [
@@ -50,9 +66,58 @@ class MentorController extends Controller
                 'sudah_absen_masuk' => $absensi_hari_ini ? true : false,
                 'sudah_absen_pulang' => ($absensi_hari_ini && $absensi_hari_ini->waktu_keluar) ? true : false,
                 'absen_hari_ini' => $absensi_hari_ini,
+                'sudah_isi_laporan_hari_ini' => $sudah_isi_laporan,
                 'sudah_dievaluasi_bulan_ini' => $sudahDievaluasi
             ];
         });
+
+        return response()->json([
+            'success' => true,
+            'summary' => [
+                'total_peserta' => $total_peserta,
+                'sudah_clock_in' => $sudah_clock_in,
+                'sudah_laporan' => $sudah_laporan,
+            ],
+            'data' => $data
+        ]);
+    }
+
+    public function getDetailPeserta(Request $request, $id)
+    {
+        $user = $request->user();
+        
+        // Ensure user is a mentor
+        $mentor = mentorMagang::where('user_id', $user->id)->first();
+        if (!$mentor) {
+            return response()->json(['success' => false, 'message' => 'Hanya mentor yang dapat mengakses data ini.'], 403);
+        }
+
+        // Get participant data
+        $peserta = \App\Models\pesertaMagang::with(['user'])
+            ->where('id', $id)
+            ->where('mentor_magang_id', $mentor->id)
+            ->first();
+
+        if (!$peserta) {
+            return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan atau bukan bimbingan Anda.'], 404);
+        }
+
+        // Prepare response data
+        $data = [
+            'id' => $peserta->id,
+            'user_id' => $peserta->user_id,
+            'nama_lengkap' => $peserta->nama_lengkap,
+            'nim' => $peserta->nim,
+            'universitas' => $peserta->universitas,
+            'prodi' => $peserta->prodi,
+            'periode_masuk' => $peserta->periode_masuk ? \Carbon\Carbon::parse($peserta->periode_masuk)->format('d M Y') : null,
+            'periode_keluar' => $peserta->periode_keluar ? \Carbon\Carbon::parse($peserta->periode_keluar)->format('d M Y') : null,
+            'no_telpon' => $peserta->no_telpon,
+            'status' => $peserta->status,
+            'alamat' => $peserta->alamat,
+            'email' => $peserta->user ? $peserta->user->email : null,
+            'tugas' => [] // Nanti bisa diisi dari model Tugas jika sudah ada
+        ];
 
         return response()->json([
             'success' => true,
