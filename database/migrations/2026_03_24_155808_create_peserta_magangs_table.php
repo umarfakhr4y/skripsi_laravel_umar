@@ -16,7 +16,12 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Hubungan ke table users
             $table->string('nim')->unique();
             $table->string('nama_lengkap');
+            $table->string('universitas')->nullable();
             $table->string('prodi');
+            $table->date('periode_masuk')->nullable();
+            $table->date('periode_keluar')->nullable();
+            $table->string('no_telpon')->nullable();
+            $table->string('status')->default('Aktif')->nullable();
             $table->text('alamat')->nullable();
             $table->timestamps();
         });
