@@ -16,5 +16,11 @@ class divisiSeeder extends Seeder
         Divisi::create([
             'nama_divisi' => 'IT Development'
         ]);
+        Divisi::create([
+            'nama_divisi' => 'Digital Marketing'
+        ]);
+        Divisi::create([
+            'nama_divisi' => 'Content creator'
+        ]);
     }
 }
