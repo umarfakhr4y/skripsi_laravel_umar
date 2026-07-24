@@ -1,0 +1,164 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Persuratan;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
+use App\Models\pesertaMagang;
+
+class PersuratanController extends Controller
+{
+    // Mengambil semua surat milik peserta yang login
+    public function index()
+    {
+        $user = Auth::user();
+        if ($user->role !== 'peserta') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $peserta = pesertaMagang::where('user_id', $user->id)->first();
+        if (!$peserta) {
+            return response()->json(['message' => 'Data peserta tidak ditemukan'], 404);
+        }
+
+        $surat = Persuratan::where('peserta_magang_id', $peserta->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $surat
+        ]);
+    }
+
+    // Peserta mengajukan surat baru
+    public function store(Request $request)
+    {
+        $user = Auth::user();
+        
+        // Pastikan hanya peserta yang bisa mengajukan
+        if ($user->role !== 'peserta') {
+            return response()->json(['message' => 'Unauthorized. Hanya peserta yang dapat mengajukan surat.'], 403);
+        }
+
+        // Cari data peserta_magang berdasarkan user_id
+        $peserta = pesertaMagang::where('user_id', $user->id)->first();
+        if (!$peserta) {
+            return response()->json(['message' => 'Data peserta tidak ditemukan'], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'jenis_surat' => 'required|string|max:255',
+            'keperluan' => 'required|string',
+            'file_pendukung' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:5120', // max 5MB
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $filePath = null;
+        if ($request->hasFile('file_pendukung')) {
+            $file = $request->file('file_pendukung');
+            // Simpan ke storage/app/public/persuratan_pendukung
+            $filePath = $file->store('persuratan_pendukung', 'public');
+        }
+
+        $surat = Persuratan::create([
+            'peserta_magang_id' => $peserta->id,
+            'jenis_surat' => $request->jenis_surat,
+            'keperluan' => $request->keperluan,
+            'file_pendukung' => $filePath,
+            'status' => 'pending', // Default status
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pengajuan surat berhasil dibuat',
+            'data' => $surat
+        ], 201);
+    }
+
+    // Mentor melihat daftar persuratan peserta bimbingannya
+    public function indexMentor(Request $request)
+    {
+        $user = Auth::user();
+        if ($user->role !== 'mentor') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $mentor = \App\Models\mentorMagang::where('user_id', $user->id)->first();
+        if (!$mentor) {
+            return response()->json(['message' => 'Data mentor tidak ditemukan'], 404);
+        }
+
+        $pesertaIds = $mentor->peserta()->pluck('id');
+
+        $surat = Persuratan::whereIn('peserta_magang_id', $pesertaIds)
+            ->with('peserta.user')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $surat
+        ]);
+    }
+
+    // Mentor mengupdate status persuratan
+    public function updateStatus(Request $request, $id)
+    {
+        $user = Auth::user();
+        if ($user->role !== 'mentor') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $mentor = \App\Models\mentorMagang::where('user_id', $user->id)->first();
+        $pesertaIds = $mentor->peserta()->pluck('id');
+
+        $surat = Persuratan::whereIn('peserta_magang_id', $pesertaIds)->find($id);
+        if (!$surat) {
+            return response()->json(['message' => 'Data persuratan tidak ditemukan atau bukan milik peserta bimbingan Anda'], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:pending,diproses,selesai,ditolak',
+            'catatan_mentor' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $surat->status = $request->status;
+        if ($request->has('catatan_mentor')) {
+            $surat->catatan_mentor = $request->catatan_mentor;
+        }
+
+        // Mentor bisa mengupload dokumen balasan jika diperlukan
+        if ($request->hasFile('link_dokumen')) {
+            $file = $request->file('link_dokumen');
+            $filePath = $file->store('persuratan_mentor', 'public');
+            $surat->link_dokumen = $filePath;
+        } elseif ($request->has('link_dokumen') && is_string($request->link_dokumen)) {
+            $surat->link_dokumen = $request->link_dokumen;
+        }
+
+        $surat->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status surat berhasil diperbarui',
+            'data' => $surat
+        ]);
+    }
+}
