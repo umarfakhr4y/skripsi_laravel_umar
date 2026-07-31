@@ -13,6 +13,7 @@ class Penugasan extends Model
 
     protected $casts = [
         'foto_petunjuk' => 'array',
+        'file_pengumpulan' => 'array',
         'deadline' => 'date',
     ];
 

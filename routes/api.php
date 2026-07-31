@@ -41,7 +41,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/mentor/perizinan/{id}/status', [\App\Http\Controllers\Api\PerizinanController::class, 'updateStatus']);
     Route::get('/mentor/penugasan', [\App\Http\Controllers\Api\PenugasanController::class, 'indexMentor']);
     Route::post('/mentor/penugasan', [\App\Http\Controllers\Api\PenugasanController::class, 'store']);
+    Route::post('/mentor/penugasan/{id}', [\App\Http\Controllers\Api\PenugasanController::class, 'update']);
+    Route::put('/mentor/penugasan/{id}', [\App\Http\Controllers\Api\PenugasanController::class, 'update']);
     Route::put('/mentor/penugasan/{id}/status', [\App\Http\Controllers\Api\PenugasanController::class, 'updateStatus']);
+    Route::put('/mentor/penugasan/{id}/review', [\App\Http\Controllers\Api\PenugasanController::class, 'reviewTugas']);
     Route::delete('/mentor/penugasan/{id}', [\App\Http\Controllers\Api\PenugasanController::class, 'destroy']);
     // Rute Peserta
     Route::get('/peserta/evaluasi', [\App\Http\Controllers\Api\PesertaController::class, 'getEvaluasiBulanan']);
@@ -52,5 +55,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/peserta/perizinan', [\App\Http\Controllers\Api\PerizinanController::class, 'store']);
     Route::get('/peserta/perizinan', [\App\Http\Controllers\Api\PerizinanController::class, 'index']);
     Route::get('/peserta/penugasan', [\App\Http\Controllers\Api\PenugasanController::class, 'indexPeserta']);
+    Route::post('/peserta/penugasan/{id}/submit', [\App\Http\Controllers\Api\PenugasanController::class, 'submitTugas']);
     Route::put('/peserta/penugasan/{id}/status', [\App\Http\Controllers\Api\PenugasanController::class, 'updateStatus']);
 });
