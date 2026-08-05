@@ -102,6 +102,12 @@ class MentorController extends Controller
             return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan atau bukan bimbingan Anda.'], 404);
         }
 
+        // Ambil daftar tugas yang diberikan mentor ini ke peserta ini
+        $tugas = \App\Models\Penugasan::where('peserta_magang_id', $peserta->id)
+            ->where('mentor_magang_id', $mentor->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         // Prepare response data
         $data = [
             'id' => $peserta->id,
@@ -116,7 +122,7 @@ class MentorController extends Controller
             'status' => $peserta->status,
             'alamat' => $peserta->alamat,
             'email' => $peserta->user ? $peserta->user->email : null,
-            'tugas' => [] // Nanti bisa diisi dari model Tugas jika sudah ada
+            'tugas' => $tugas
         ];
 
         return response()->json([
