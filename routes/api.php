@@ -57,4 +57,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/peserta/penugasan', [\App\Http\Controllers\Api\PenugasanController::class, 'indexPeserta']);
     Route::post('/peserta/penugasan/{id}/submit', [\App\Http\Controllers\Api\PenugasanController::class, 'submitTugas']);
     Route::put('/peserta/penugasan/{id}/status', [\App\Http\Controllers\Api\PenugasanController::class, 'updateStatus']);
+
+    // Rute Notifikasi (Global untuk Mentor dan Peserta)
+    Route::get('/notifikasi', [\App\Http\Controllers\Api\NotifikasiController::class, 'index']);
+    Route::put('/notifikasi/{id}/read', [\App\Http\Controllers\Api\NotifikasiController::class, 'markAsRead']);
 });
