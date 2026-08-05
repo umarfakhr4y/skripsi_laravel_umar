@@ -147,6 +147,32 @@ class PerizinanController extends Controller
 
         $perizinan->save();
 
+        // Jika perizinan di ACC (selesai), buatkan/update record di tabel Absensi
+        if ($perizinan->status === 'selesai') {
+            $statusAbsensi = 'izin'; // Default
+            $jenis = strtolower(trim($perizinan->jenis_izin));
+            
+            if ($jenis === 'sakit' || str_contains($jenis, 'sakit')) {
+                $statusAbsensi = 'sakit';
+            } elseif ($jenis === 'terlambat' || str_contains($jenis, 'terlambat')) {
+                $statusAbsensi = 'hadir';
+            } else {
+                // Untuk "Lainnya" atau jenis lain
+                $statusAbsensi = 'izin';
+            }
+
+            \App\Models\Absensi::updateOrCreate(
+                [
+                    'peserta_magang_id' => $perizinan->peserta_magang_id,
+                    'tanggal' => $perizinan->tanggal_izin,
+                ],
+                [
+                    'status' => $statusAbsensi,
+                    'keterangan' => 'Di-ACC otomatis dari Perizinan (' . $perizinan->jenis_izin . ')',
+                ]
+            );
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Status izin berhasil diperbarui',

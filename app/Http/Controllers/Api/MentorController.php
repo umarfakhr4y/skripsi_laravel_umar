@@ -108,6 +108,21 @@ class MentorController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Ambil rekap absensi bulan ini
+        $bulanIni = \Carbon\Carbon::now()->month;
+        $tahunIni = \Carbon\Carbon::now()->year;
+
+        $absensiBulanIni = \App\Models\Absensi::where('peserta_magang_id', $peserta->id)
+            ->whereMonth('tanggal', $bulanIni)
+            ->whereYear('tanggal', $tahunIni)
+            ->get();
+
+        $rekapAbsensi = [
+            'hadir' => $absensiBulanIni->where('status', 'hadir')->count(),
+            'izin' => $absensiBulanIni->where('status', 'izin')->count(),
+            'sakit' => $absensiBulanIni->where('status', 'sakit')->count(),
+        ];
+
         // Prepare response data
         $data = [
             'id' => $peserta->id,
@@ -122,7 +137,8 @@ class MentorController extends Controller
             'status' => $peserta->status,
             'alamat' => $peserta->alamat,
             'email' => $peserta->user ? $peserta->user->email : null,
-            'tugas' => $tugas
+            'tugas' => $tugas,
+            'rekap_absensi' => $rekapAbsensi
         ];
 
         return response()->json([
