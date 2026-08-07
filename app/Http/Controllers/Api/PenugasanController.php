@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Penugasan;
 use App\Models\mentorMagang;
 use App\Models\pesertaMagang;
+use App\Models\Notifikasi;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 
@@ -155,6 +156,20 @@ class PenugasanController extends Controller
             'deadline' => $request->deadline,
             'status_tugas' => 'Aktif',
         ]);
+
+        $peserta = pesertaMagang::find($request->peserta_magang_id);
+        if ($peserta) {
+            Notifikasi::create([
+                'user_id' => $peserta->user_id,
+                'tipe' => 'tugas_baru',
+                'judul' => 'Tugas Baru Diberikan',
+                'pesan' => "Mentor telah memberikan tugas baru: " . $request->judul_tugas,
+                'is_read' => false,
+                'data_terkait' => json_encode([
+                    'penugasan_id' => $penugasan->id
+                ])
+            ]);
+        }
 
         return response()->json([
             'success' => true,
