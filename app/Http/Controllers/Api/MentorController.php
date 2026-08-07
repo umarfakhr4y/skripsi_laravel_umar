@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\mentorMagang;
+use App\Models\PengaturanAbsensi;
 use Carbon\Carbon;
 
 class MentorController extends Controller
@@ -121,6 +122,8 @@ class MentorController extends Controller
             'hadir' => $absensiBulanIni->where('status', 'hadir')->count(),
             'izin' => $absensiBulanIni->where('status', 'izin')->count(),
             'sakit' => $absensiBulanIni->where('status', 'sakit')->count(),
+            'telat' => $absensiBulanIni->where('status', 'telat')->count(),
+            'alpa' => $absensiBulanIni->where('status', 'alpa')->count(),
         ];
 
         // Prepare response data
@@ -382,5 +385,59 @@ class MentorController extends Controller
             'message' => 'Status bimbingan berhasil diperbarui',
             'data' => $bimbingan
         ], 200);
+    }
+
+    public function getPengaturanAbsen(Request $request)
+    {
+        $user = $request->user();
+        $mentor = mentorMagang::where('user_id', $user->id)->first();
+        if (!$mentor) {
+            return response()->json(['success' => false, 'message' => 'Hanya mentor yang dapat mengakses data ini.'], 403);
+        }
+
+        $tanggal_hari_ini = Carbon::now()->toDateString();
+        $batas = PengaturanAbsensi::where('mentor_magang_id', $mentor->id)
+            ->where('tanggal_berlaku', '<=', $tanggal_hari_ini)
+            ->orderBy('tanggal_berlaku', 'desc')
+            ->first();
+            
+        $batasMendatang = PengaturanAbsensi::where('mentor_magang_id', $mentor->id)
+            ->where('tanggal_berlaku', '>', $tanggal_hari_ini)
+            ->orderBy('tanggal_berlaku', 'desc')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'batas_waktu_sekarang' => $batas ? $batas->batas_waktu : '08:00:00',
+            'batas_waktu_mendatang' => $batasMendatang ? $batasMendatang->batas_waktu : null,
+            'tanggal_berlaku_mendatang' => $batasMendatang ? $batasMendatang->tanggal_berlaku : null,
+        ]);
+    }
+
+    public function setPengaturanAbsen(Request $request)
+    {
+        $request->validate([
+            'batas_waktu' => 'required|date_format:H:i'
+        ]);
+
+        $user = $request->user();
+        $mentor = mentorMagang::where('user_id', $user->id)->first();
+        if (!$mentor) {
+            return response()->json(['success' => false, 'message' => 'Akses ditolak.'], 403);
+        }
+
+        // Aturan baru berlaku besok
+        $besok = Carbon::tomorrow()->toDateString();
+        
+        $batas = PengaturanAbsensi::updateOrCreate(
+            ['mentor_magang_id' => $mentor->id, 'tanggal_berlaku' => $besok],
+            ['batas_waktu' => $request->batas_waktu . ':00']
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Batas waktu absen berhasil diperbarui dan akan berlaku mulai besok.',
+            'data' => $batas
+        ]);
     }
 }
