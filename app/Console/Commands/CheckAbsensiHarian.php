@@ -48,6 +48,14 @@ class CheckAbsensiHarian extends Command
                 if (!$absen) {
                     $pesertaBelumAbsen++;
                     $namaPesertaList[] = $peserta->nama_lengkap;
+                    
+                    // Otomatis buatkan record ALPA
+                    Absensi::create([
+                        'peserta_magang_id' => $peserta->id,
+                        'tanggal' => $today,
+                        'status' => 'alpa',
+                        'keterangan' => 'Tidak melakukan presensi hingga batas waktu (Otomatis oleh sistem)'
+                    ]);
                 }
             }
 

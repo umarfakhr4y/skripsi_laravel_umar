@@ -14,7 +14,7 @@ class AbsensiController extends Controller
     {
         // Validasi input
         $request->validate([
-            'status' => 'required|in:hadir,izin,sakit',
+            'status' => 'required|in:hadir,izin,sakit,telat',
             'keterangan' => 'nullable|string',
             'foto_bukti' => 'nullable|image|max:2048', // opsional, max 2MB
             'latitude' => 'nullable|string',
@@ -45,8 +45,8 @@ class AbsensiController extends Controller
 
         // Skenario 1: Sudah ada record hari ini
         if ($absensi) {
-            // Jika sebelumnya status hadir, dan belum absen pulang -> maka lakukan absen pulang
-            if ($request->status == 'hadir' && $absensi->waktu_masuk && !$absensi->waktu_keluar) {
+            // Jika sebelumnya status hadir/telat, dan belum absen pulang -> maka lakukan absen pulang
+            if (($request->status == 'hadir' || $request->status == 'telat') && $absensi->waktu_masuk && !$absensi->waktu_keluar) {
                 $absensi->update([
                     'waktu_keluar' => $waktu_sekarang,
                     'latitude' => $request->latitude ?? $absensi->latitude,
@@ -61,25 +61,50 @@ class AbsensiController extends Controller
             return response()->json(['message' => 'Anda sudah melakukan absen hari ini.'], 400);
         }
 
+        $statusToSave = $request->status;
+
+        // Cek Batas Waktu Absen (Hanya untuk absen datang/hadir pertama kali)
+        if ($request->status == 'hadir') {
+            $batas = \App\Models\PengaturanAbsensi::where('mentor_magang_id', $peserta->mentor_magang_id)
+                ->where('tanggal_berlaku', '<=', $tanggal_hari_ini)
+                ->orderBy('tanggal_berlaku', 'desc')
+                ->first();
+            
+            $waktu_batas = $batas ? $batas->batas_waktu : '08:00:00';
+
+            if ($waktu_sekarang > $waktu_batas) {
+                $statusToSave = 'telat';
+            }
+        }
+
         // Skenario 2: Belum ada record hari ini -> buat absen baru
         $data_absen = [
             'peserta_magang_id' => $peserta->id,
             'tanggal' => $tanggal_hari_ini,
-            'status' => $request->status,
+            'status' => $statusToSave,
             'keterangan' => $request->keterangan,
             'foto_bukti' => $foto_path,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
         ];
 
-        // Jika statusnya hadir, set waktu_masuk
-        if ($request->status == 'hadir') {
+        // Jika statusnya hadir atau telat, set waktu_masuk
+        if ($statusToSave == 'hadir' || $statusToSave == 'telat') {
             $data_absen['waktu_masuk'] = $waktu_sekarang;
         }
 
         $absen_baru = Absensi::create($data_absen);
 
+        if ($statusToSave == 'telat') {
+            return response()->json([
+                'success' => true,
+                'message' => "Anda telah berhasil absen, namun tercatat sebagai TERLAMBAT (lewat dari batas waktu).",
+                'data' => $absen_baru
+            ], 201);
+        }
+
         return response()->json([
+            'success' => true,
             'message' => 'Berhasil mengirim absen',
             'data' => $absen_baru
         ], 201);
