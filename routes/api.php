@@ -46,6 +46,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/mentor/penugasan/{id}/status', [\App\Http\Controllers\Api\PenugasanController::class, 'updateStatus']);
     Route::put('/mentor/penugasan/{id}/review', [\App\Http\Controllers\Api\PenugasanController::class, 'reviewTugas']);
     Route::delete('/mentor/penugasan/{id}', [\App\Http\Controllers\Api\PenugasanController::class, 'destroy']);
+    Route::get('/mentor/pengaturan-absen', [\App\Http\Controllers\Api\MentorController::class, 'getPengaturanAbsen']);
+    Route::post('/mentor/pengaturan-absen', [\App\Http\Controllers\Api\MentorController::class, 'setPengaturanAbsen']);
     // Rute Peserta
     Route::get('/peserta/evaluasi', [\App\Http\Controllers\Api\PesertaController::class, 'getEvaluasiBulanan']);
     Route::post('/peserta/bimbingan', [\App\Http\Controllers\Api\PesertaController::class, 'storeBimbingan']);
