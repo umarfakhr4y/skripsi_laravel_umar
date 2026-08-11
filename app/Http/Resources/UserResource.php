@@ -16,9 +16,14 @@ class UserResource extends JsonResource
     {
         $profileData = $this->role === 'peserta' ? $this->peserta : $this->mentor;
 
+        if ($this->role === 'mentor' && $profileData) {
+            $profileData->load('divisi');
+        }
+
         $sudahAbsen = false;
         $dataAbsenHariIni = null;
         $sudahIsiLaporan = false;
+        $batasWaktuAbsen = '08:00:00';
 
         if ($this->role === 'peserta' && $this->peserta) {
             $absen = \App\Models\Absensi::where('peserta_magang_id', $this->peserta->id)
@@ -37,6 +42,22 @@ class UserResource extends JsonResource
             if ($laporan) {
                 $sudahIsiLaporan = true;
             }
+
+            if ($this->peserta->mentor_magang_id) {
+                $batas = \App\Models\PengaturanAbsensi::where('mentor_magang_id', $this->peserta->mentor_magang_id)
+                    ->where('tanggal_berlaku', '<=', \Carbon\Carbon::now()->toDateString())
+                    ->orderBy('tanggal_berlaku', 'desc')
+                    ->first();
+                if ($batas) {
+                    $batasWaktuAbsen = $batas->batas_waktu;
+                }
+            }
+        }
+
+        if ($profileData && isset($profileData->profile_picture) && $profileData->profile_picture) {
+            $profileData->profile_picture_url = asset('storage/' . $profileData->profile_picture);
+        } else if ($profileData) {
+            $profileData->profile_picture_url = null;
         }
 
         return [
@@ -46,6 +67,7 @@ class UserResource extends JsonResource
             'sudah_absen'=> $sudahAbsen,
             'sudah_isi_laporan' => $sudahIsiLaporan,
             'absen_hari_ini' => $dataAbsenHariIni,
+            'batas_waktu_absen' => substr($batasWaktuAbsen, 0, 5),
             'data'       => $profileData,
         ];
     }

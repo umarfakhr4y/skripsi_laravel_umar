@@ -64,6 +64,7 @@ class MentorController extends Controller
                 'nama_lengkap' => $p->nama_lengkap,
                 'nim' => $p->nim,
                 'email' => $p->user ? $p->user->email : null,
+                'profile_picture_url' => $p->profile_picture ? asset('storage/' . $p->profile_picture) : null,
                 'sudah_absen_masuk' => $absensi_hari_ini ? true : false,
                 'sudah_absen_pulang' => ($absensi_hari_ini && $absensi_hari_ini->waktu_keluar) ? true : false,
                 'absen_hari_ini' => $absensi_hari_ini,
@@ -140,6 +141,7 @@ class MentorController extends Controller
             'status' => $peserta->status,
             'alamat' => $peserta->alamat,
             'email' => $peserta->user ? $peserta->user->email : null,
+            'profile_picture_url' => $peserta->profile_picture ? asset('storage/' . $peserta->profile_picture) : null,
             'tugas' => $tugas,
             'rekap_absensi' => $rekapAbsensi
         ];

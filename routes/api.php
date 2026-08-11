@@ -8,7 +8,9 @@ use App\Http\Resources\UserResource;
 
 //login awal
 Route::post('/login', [AuthController::class, 'login']);
-//test
+
+//update token fcm
+Route::middleware('auth:sanctum')->post('/update-fcm-token', [AuthController::class, 'updateFcmToken']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -63,4 +65,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Rute Notifikasi (Global untuk Mentor dan Peserta)
     Route::get('/notifikasi', [\App\Http\Controllers\Api\NotifikasiController::class, 'index']);
     Route::put('/notifikasi/{id}/read', [\App\Http\Controllers\Api\NotifikasiController::class, 'markAsRead']);
+
+    // Rute Profil
+    Route::post('/profile/update-data', [\App\Http\Controllers\Api\ProfileController::class, 'updateData']);
+    Route::post('/profile/update-picture', [\App\Http\Controllers\Api\ProfileController::class, 'updatePicture']);
 });

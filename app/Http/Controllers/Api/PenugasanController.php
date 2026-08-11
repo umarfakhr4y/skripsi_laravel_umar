@@ -10,6 +10,10 @@ use App\Models\pesertaMagang;
 use App\Models\Notifikasi;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use App\Models\User;
+use Kreait\Firebase\Factory;
+use Kreait\Firebase\Messaging\CloudMessage;
+use Kreait\Firebase\Messaging\Notification as FcmNotification;
 
 class PenugasanController extends Controller
 {
@@ -169,6 +173,39 @@ class PenugasanController extends Controller
                     'penugasan_id' => $penugasan->id
                 ])
             ]);
+
+            // Push Notification FCM
+            $pesertaUser = User::find($peserta->user_id);
+            if ($pesertaUser && $pesertaUser->fcm_token) {
+                try {
+                    $factory = (new Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
+                    $messaging = $factory->createMessaging();
+
+                    $notification = FcmNotification::create(
+                        'Tugas Baru Diberikan!', 
+                        "Mentor telah memberikan tugas baru: " . $request->judul_tugas
+                    );
+
+                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                        'priority' => 'high',
+                        'notification' => [
+                            'sound' => 'default',
+                        ],
+                    ]);
+
+                    $message = CloudMessage::withTarget('token', $pesertaUser->fcm_token)
+                        ->withNotification($notification)
+                        ->withAndroidConfig($androidConfig)
+                        ->withData([
+                            'tipe' => 'tugas_baru',
+                            'penugasan_id' => (string) $penugasan->id
+                        ]);
+
+                    $messaging->send($message);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
+                }
+            }
         }
 
         return response()->json([
