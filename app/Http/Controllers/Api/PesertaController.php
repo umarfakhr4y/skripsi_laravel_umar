@@ -99,6 +99,46 @@ class PesertaController extends Controller
             'status' => 'requested'
         ]);
 
+        if ($peserta->mentor_magang_id) {
+            $mentor = \App\Models\mentorMagang::find($peserta->mentor_magang_id);
+            if ($mentor) {
+                \App\Models\Notifikasi::create([
+                    'user_id' => $mentor->user_id,
+                    'tipe' => 'bimbingan_baru',
+                    'judul' => 'Permintaan Bimbingan Baru',
+                    'pesan' => "Peserta " . $peserta->nama_lengkap . " mengajukan bimbingan: " . $request->topik,
+                    'is_read' => false,
+                    'data_terkait' => json_encode(['bimbingan_id' => $bimbingan->id])
+                ]);
+
+                $mentorUser = \App\Models\User::find($mentor->user_id);
+                if ($mentorUser && $mentorUser->fcm_token) {
+                    try {
+                        $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
+                        $messaging = $factory->createMessaging();
+                        $notification = \Kreait\Firebase\Messaging\Notification::create(
+                            'Permintaan Bimbingan Baru!', 
+                            $peserta->nama_lengkap . " mengajukan bimbingan: " . $request->topik
+                        );
+                        $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                            'priority' => 'high',
+                            'notification' => ['sound' => 'default']
+                        ]);
+                        $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $mentorUser->fcm_token)
+                            ->withNotification($notification)
+                            ->withAndroidConfig($androidConfig)
+                            ->withData([
+                                'tipe' => 'bimbingan_baru', 
+                                'bimbingan_id' => (string) $bimbingan->id
+                            ]);
+                        $messaging->send($message);
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
+                    }
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Berhasil mengajukan bimbingan',

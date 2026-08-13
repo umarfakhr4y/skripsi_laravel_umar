@@ -80,6 +80,46 @@ class PerizinanController extends Controller
             'status' => 'pending',
         ]);
 
+        if ($peserta->mentor_magang_id) {
+            $mentor = \App\Models\mentorMagang::find($peserta->mentor_magang_id);
+            if ($mentor) {
+                \App\Models\Notifikasi::create([
+                    'user_id' => $mentor->user_id,
+                    'tipe' => 'izin_baru',
+                    'judul' => 'Pengajuan Izin Baru',
+                    'pesan' => "Peserta " . $peserta->nama_lengkap . " mengajukan izin: " . $request->jenis_izin,
+                    'is_read' => false,
+                    'data_terkait' => json_encode(['perizinan_id' => $perizinan->id])
+                ]);
+
+                $mentorUser = \App\Models\User::find($mentor->user_id);
+                if ($mentorUser && $mentorUser->fcm_token) {
+                    try {
+                        $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
+                        $messaging = $factory->createMessaging();
+                        $notification = \Kreait\Firebase\Messaging\Notification::create(
+                            'Pengajuan Izin Baru!', 
+                            $peserta->nama_lengkap . " mengajukan izin: " . $request->jenis_izin
+                        );
+                        $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                            'priority' => 'high',
+                            'notification' => ['sound' => 'default']
+                        ]);
+                        $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $mentorUser->fcm_token)
+                            ->withNotification($notification)
+                            ->withAndroidConfig($androidConfig)
+                            ->withData([
+                                'tipe' => 'izin_baru', 
+                                'perizinan_id' => (string) $perizinan->id
+                            ]);
+                        $messaging->send($message);
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
+                    }
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Pengajuan izin berhasil dibuat',
@@ -171,6 +211,44 @@ class PerizinanController extends Controller
                     'keterangan' => 'Di-ACC otomatis dari Perizinan (' . $perizinan->jenis_izin . ')',
                 ]
             );
+        }
+
+        $peserta = \App\Models\pesertaMagang::find($perizinan->peserta_magang_id);
+        if ($peserta) {
+            $notifTitle = 'Update Status Izin';
+            $notifPesan = 'Pengajuan izin ' . $perizinan->jenis_izin . ' Anda telah ' . $perizinan->status . ' oleh Mentor.';
+
+            \App\Models\Notifikasi::create([
+                'user_id' => $peserta->user_id,
+                'tipe' => 'update_izin',
+                'judul' => $notifTitle,
+                'pesan' => $notifPesan,
+                'is_read' => false,
+                'data_terkait' => json_encode(['perizinan_id' => $perizinan->id])
+            ]);
+
+            $pesertaUser = \App\Models\User::find($peserta->user_id);
+            if ($pesertaUser && $pesertaUser->fcm_token) {
+                try {
+                    $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
+                    $messaging = $factory->createMessaging();
+                    $notification = \Kreait\Firebase\Messaging\Notification::create($notifTitle, $notifPesan);
+                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                        'priority' => 'high',
+                        'notification' => ['sound' => 'default']
+                    ]);
+                    $fcmMessage = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $pesertaUser->fcm_token)
+                        ->withNotification($notification)
+                        ->withAndroidConfig($androidConfig)
+                        ->withData([
+                            'tipe' => 'update_izin', 
+                            'perizinan_id' => (string) $perizinan->id
+                        ]);
+                    $messaging->send($fcmMessage);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
+                }
+            }
         }
 
         return response()->json([

@@ -255,6 +255,44 @@ class MentorController extends Controller
             'bulan_tahun' => $request->bulan_tahun,
         ]);
 
+        $peserta = \App\Models\pesertaMagang::find($request->peserta_magang_id);
+        if ($peserta) {
+            $notifTitle = 'Evaluasi Bulanan Terbit';
+            $notifPesan = 'Mentor telah memberikan hasil evaluasi bulanan Anda untuk periode ' . $request->bulan_tahun . '.';
+
+            \App\Models\Notifikasi::create([
+                'user_id' => $peserta->user_id,
+                'tipe' => 'evaluasi_baru',
+                'judul' => $notifTitle,
+                'pesan' => $notifPesan,
+                'is_read' => false,
+                'data_terkait' => json_encode(['evaluasi_id' => $evaluasi->id])
+            ]);
+
+            $pesertaUser = \App\Models\User::find($peserta->user_id);
+            if ($pesertaUser && $pesertaUser->fcm_token) {
+                try {
+                    $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
+                    $messaging = $factory->createMessaging();
+                    $notification = \Kreait\Firebase\Messaging\Notification::create($notifTitle, $notifPesan);
+                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                        'priority' => 'high',
+                        'notification' => ['sound' => 'default']
+                    ]);
+                    $fcmMessage = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $pesertaUser->fcm_token)
+                        ->withNotification($notification)
+                        ->withAndroidConfig($androidConfig)
+                        ->withData([
+                            'tipe' => 'evaluasi_baru', 
+                            'evaluasi_id' => (string) $evaluasi->id
+                        ]);
+                    $messaging->send($fcmMessage);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Evaluasi bulanan berhasil disimpan',
@@ -381,6 +419,55 @@ class MentorController extends Controller
             'status' => $request->status,
             'link_meet' => $request->has('link_meet') ? $request->link_meet : $bimbingan->link_meet
         ]);
+
+        $peserta = \App\Models\pesertaMagang::find($bimbingan->peserta_magang_id);
+        if ($peserta) {
+            $statusIndo = $bimbingan->status;
+            if (strtolower($statusIndo) == 'accepted') {
+                $statusIndo = 'disetujui';
+            } elseif (strtolower($statusIndo) == 'rejected') {
+                $statusIndo = 'ditolak';
+            } elseif (strtolower($statusIndo) == 'completed') {
+                $statusIndo = 'diselesaikan';
+            }
+            
+            $tanggalBimbingan = date('d-m-Y', strtotime($bimbingan->tanggal));
+
+            $notifTitle = 'Update Status Bimbingan';
+            $notifPesan = 'Bimbingan Anda pada tanggal ' . $tanggalBimbingan . ' telah ' . $statusIndo . ' oleh mentor.';
+
+            \App\Models\Notifikasi::create([
+                'user_id' => $peserta->user_id,
+                'tipe' => 'update_bimbingan',
+                'judul' => $notifTitle,
+                'pesan' => $notifPesan,
+                'is_read' => false,
+                'data_terkait' => json_encode(['bimbingan_id' => $bimbingan->id])
+            ]);
+
+            $pesertaUser = \App\Models\User::find($peserta->user_id);
+            if ($pesertaUser && $pesertaUser->fcm_token) {
+                try {
+                    $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
+                    $messaging = $factory->createMessaging();
+                    $notification = \Kreait\Firebase\Messaging\Notification::create($notifTitle, $notifPesan);
+                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                        'priority' => 'high',
+                        'notification' => ['sound' => 'default']
+                    ]);
+                    $fcmMessage = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $pesertaUser->fcm_token)
+                        ->withNotification($notification)
+                        ->withAndroidConfig($androidConfig)
+                        ->withData([
+                            'tipe' => 'update_bimbingan', 
+                            'bimbingan_id' => (string) $bimbingan->id
+                        ]);
+                    $messaging->send($fcmMessage);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
+                }
+            }
+        }
 
         return response()->json([
             'success' => true,

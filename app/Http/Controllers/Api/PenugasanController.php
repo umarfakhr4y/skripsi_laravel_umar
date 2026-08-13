@@ -458,6 +458,46 @@ class PenugasanController extends Controller
             'status_tugas' => 'Ditinjau',
         ]);
 
+        $mentorTugas = mentorMagang::find($penugasan->mentor_magang_id);
+        if ($mentorTugas) {
+            Notifikasi::create([
+                'user_id' => $mentorTugas->user_id,
+                'tipe' => 'tugas_dikumpulkan',
+                'judul' => 'Tugas Dikumpulkan',
+                'pesan' => "Peserta " . $peserta->nama_lengkap . " telah mengumpulkan tugas: " . $penugasan->judul_tugas,
+                'is_read' => false,
+                'data_terkait' => json_encode([
+                    'penugasan_id' => $penugasan->id
+                ])
+            ]);
+
+            $mentorUser = User::find($mentorTugas->user_id);
+            if ($mentorUser && $mentorUser->fcm_token) {
+                try {
+                    $factory = (new Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
+                    $messaging = $factory->createMessaging();
+                    $notification = FcmNotification::create(
+                        'Tugas Dikumpulkan!', 
+                        $peserta->nama_lengkap . " telah mengumpulkan tugas: " . $penugasan->judul_tugas
+                    );
+                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                        'priority' => 'high',
+                        'notification' => ['sound' => 'default']
+                    ]);
+                    $message = CloudMessage::withTarget('token', $mentorUser->fcm_token)
+                        ->withNotification($notification)
+                        ->withAndroidConfig($androidConfig)
+                        ->withData([
+                            'tipe' => 'tugas_dikumpulkan', 
+                            'penugasan_id' => (string) $penugasan->id
+                        ]);
+                    $messaging->send($message);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Tugas berhasil dikumpulkan dan menunggu review mentor.',
@@ -508,12 +548,51 @@ class PenugasanController extends Controller
                 'catatan_mentor' => $request->catatan_mentor ?? $penugasan->catatan_mentor,
             ]);
             $message = 'Tugas berhasil disetujui (ACC).';
+            $notifTitle = 'Tugas Disetujui';
+            $notifPesan = 'Tugas "' . $penugasan->judul_tugas . '" telah disetujui oleh Mentor.';
         } else {
             $penugasan->update([
                 'status_tugas' => 'Revisi',
                 'catatan_mentor' => $request->catatan_mentor,
             ]);
             $message = 'Tugas dikembalikan ke peserta untuk revisi.';
+            $notifTitle = 'Tugas Perlu Revisi';
+            $notifPesan = 'Tugas "' . $penugasan->judul_tugas . '" dikembalikan untuk revisi.';
+        }
+
+        $peserta = pesertaMagang::find($penugasan->peserta_magang_id);
+        if ($peserta) {
+            Notifikasi::create([
+                'user_id' => $peserta->user_id,
+                'tipe' => 'review_tugas',
+                'judul' => $notifTitle,
+                'pesan' => $notifPesan,
+                'is_read' => false,
+                'data_terkait' => json_encode(['penugasan_id' => $penugasan->id])
+            ]);
+
+            $pesertaUser = User::find($peserta->user_id);
+            if ($pesertaUser && $pesertaUser->fcm_token) {
+                try {
+                    $factory = (new Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
+                    $messaging = $factory->createMessaging();
+                    $notification = FcmNotification::create($notifTitle, $notifPesan);
+                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                        'priority' => 'high',
+                        'notification' => ['sound' => 'default']
+                    ]);
+                    $fcmMessage = CloudMessage::withTarget('token', $pesertaUser->fcm_token)
+                        ->withNotification($notification)
+                        ->withAndroidConfig($androidConfig)
+                        ->withData([
+                            'tipe' => 'review_tugas', 
+                            'penugasan_id' => (string) $penugasan->id
+                        ]);
+                    $messaging->send($fcmMessage);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
+                }
+            }
         }
 
         return response()->json([

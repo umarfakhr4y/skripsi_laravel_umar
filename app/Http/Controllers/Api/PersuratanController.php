@@ -78,6 +78,46 @@ class PersuratanController extends Controller
             'status' => 'pending', // Default status
         ]);
 
+        if ($peserta->mentor_magang_id) {
+            $mentor = \App\Models\mentorMagang::find($peserta->mentor_magang_id);
+            if ($mentor) {
+                \App\Models\Notifikasi::create([
+                    'user_id' => $mentor->user_id,
+                    'tipe' => 'persuratan_baru',
+                    'judul' => 'Pengajuan Persuratan Baru',
+                    'pesan' => "Peserta " . $peserta->nama_lengkap . " mengajukan persuratan: " . $request->jenis_surat,
+                    'is_read' => false,
+                    'data_terkait' => json_encode(['persuratan_id' => $surat->id])
+                ]);
+
+                $mentorUser = \App\Models\User::find($mentor->user_id);
+                if ($mentorUser && $mentorUser->fcm_token) {
+                    try {
+                        $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
+                        $messaging = $factory->createMessaging();
+                        $notification = \Kreait\Firebase\Messaging\Notification::create(
+                            'Pengajuan Persuratan Baru!', 
+                            $peserta->nama_lengkap . " mengajukan persuratan: " . $request->jenis_surat
+                        );
+                        $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                            'priority' => 'high',
+                            'notification' => ['sound' => 'default']
+                        ]);
+                        $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $mentorUser->fcm_token)
+                            ->withNotification($notification)
+                            ->withAndroidConfig($androidConfig)
+                            ->withData([
+                                'tipe' => 'persuratan_baru', 
+                                'persuratan_id' => (string) $surat->id
+                            ]);
+                        $messaging->send($message);
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
+                    }
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Pengajuan surat berhasil dibuat',
@@ -154,6 +194,44 @@ class PersuratanController extends Controller
         }
 
         $surat->save();
+
+        $peserta = \App\Models\pesertaMagang::find($surat->peserta_magang_id);
+        if ($peserta) {
+            $notifTitle = 'Update Status Surat';
+            $notifPesan = 'Pengajuan surat ' . $surat->jenis_surat . ' Anda telah ' . $surat->status . ' oleh Mentor.';
+
+            \App\Models\Notifikasi::create([
+                'user_id' => $peserta->user_id,
+                'tipe' => 'update_surat',
+                'judul' => $notifTitle,
+                'pesan' => $notifPesan,
+                'is_read' => false,
+                'data_terkait' => json_encode(['persuratan_id' => $surat->id])
+            ]);
+
+            $pesertaUser = \App\Models\User::find($peserta->user_id);
+            if ($pesertaUser && $pesertaUser->fcm_token) {
+                try {
+                    $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
+                    $messaging = $factory->createMessaging();
+                    $notification = \Kreait\Firebase\Messaging\Notification::create($notifTitle, $notifPesan);
+                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                        'priority' => 'high',
+                        'notification' => ['sound' => 'default']
+                    ]);
+                    $fcmMessage = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $pesertaUser->fcm_token)
+                        ->withNotification($notification)
+                        ->withAndroidConfig($androidConfig)
+                        ->withData([
+                            'tipe' => 'update_surat', 
+                            'persuratan_id' => (string) $surat->id
+                        ]);
+                    $messaging->send($fcmMessage);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
+                }
+            }
+        }
 
         return response()->json([
             'success' => true,
