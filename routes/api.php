@@ -15,6 +15,13 @@ Route::middleware('auth:sanctum')->post('/update-fcm-token', [AuthController::cl
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
+    // Rute Admin
+    Route::get('/admin/peserta', [\App\Http\Controllers\Api\AdminController::class, 'getPeserta']);
+    Route::get('/admin/mentor', [\App\Http\Controllers\Api\AdminController::class, 'getMentor']);
+    Route::get('/admin/divisi', [\App\Http\Controllers\Api\AdminController::class, 'getDivisi']);
+    Route::get('/admin/kehadiran-hari-ini', [\App\Http\Controllers\Api\AdminController::class, 'getKehadiranHariIni']);
+    Route::get('/admin/tugas', [\App\Http\Controllers\Api\AdminController::class, 'getTugas']);
+
     // ambil data login
     Route::get('/user', function (Request $request) {
         $user = $request->user()->load(['peserta', 'mentor.divisi']);
