@@ -79,6 +79,34 @@ class AdminController extends Controller
     }
 
     /**
+     * Create new Divisi.
+     */
+    public function postDivisi(Request $request)
+    {
+        try {
+            $request->validate([
+                'nama_divisi' => 'required|string|max:255',
+            ]);
+
+            $divisi = Divisi::create([
+                'nama_divisi' => $request->nama_divisi,
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil menambah data divisi',
+                'data' => $divisi
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambah data divisi',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get Kehadiran (Attendance) stats for today.
      */
     public function getKehadiranHariIni(Request $request)
