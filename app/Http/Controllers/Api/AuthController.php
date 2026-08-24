@@ -29,6 +29,15 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // Cek jika user adalah peserta magang dan statusnya dinonaktifkan
+        $peserta = $user->peserta;
+        if ($peserta && !$peserta->status) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun Anda telah dinonaktifkan oleh Admin.',
+            ], 403);
+        }
+
         // Generate Token Sanctum
         $token = $user->createToken('auth_token')->plainTextToken;
 
