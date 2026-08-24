@@ -107,6 +107,57 @@ class AdminController extends Controller
     }
 
     /**
+     * Update Divisi.
+     */
+    public function putDivisi(Request $request, $id)
+    {
+        try {
+            $divisi = Divisi::findOrFail($id);
+            $request->validate([
+                'nama_divisi' => 'required|string|max:255',
+            ]);
+
+            $divisi->update([
+                'nama_divisi' => $request->nama_divisi,
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil mengubah data divisi',
+                'data' => $divisi
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengubah data divisi',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete Divisi.
+     */
+    public function deleteDivisi($id)
+    {
+        try {
+            $divisi = Divisi::findOrFail($id);
+            $divisi->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil menghapus data divisi',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data divisi',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get Kehadiran (Attendance) stats for today.
      */
     public function getKehadiranHariIni(Request $request)

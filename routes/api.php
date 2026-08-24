@@ -20,6 +20,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/mentor', [\App\Http\Controllers\Api\AdminController::class, 'getMentor']);
     Route::get('/admin/divisi', [\App\Http\Controllers\Api\AdminController::class, 'getDivisi']);
     Route::post('/admin/divisi', [\App\Http\Controllers\Api\AdminController::class, 'postDivisi']);
+    Route::put('/admin/divisi/{id}', [\App\Http\Controllers\Api\AdminController::class, 'putDivisi']);
+    Route::delete('/admin/divisi/{id}', [\App\Http\Controllers\Api\AdminController::class, 'deleteDivisi']);
     Route::get('/admin/kehadiran-hari-ini', [\App\Http\Controllers\Api\AdminController::class, 'getKehadiranHariIni']);
     Route::get('/admin/tugas', [\App\Http\Controllers\Api\AdminController::class, 'getTugas']);
 
