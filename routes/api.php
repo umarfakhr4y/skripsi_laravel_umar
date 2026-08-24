@@ -20,6 +20,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/peserta/{id}', [\App\Http\Controllers\Api\AdminController::class, 'getDetailPeserta']);
     Route::put('/admin/peserta/{id}', [\App\Http\Controllers\Api\AdminController::class, 'updatePeserta']);
     Route::get('/admin/mentor', [\App\Http\Controllers\Api\AdminController::class, 'getMentor']);
+    Route::get('/admin/mentor/{id}', [\App\Http\Controllers\Api\AdminController::class, 'getDetailMentor']);
+    Route::put('/admin/mentor/{id}', [\App\Http\Controllers\Api\AdminController::class, 'updateMentor']);
     Route::get('/admin/divisi', [\App\Http\Controllers\Api\AdminController::class, 'getDivisi']);
     Route::post('/admin/divisi', [\App\Http\Controllers\Api\AdminController::class, 'postDivisi']);
     Route::put('/admin/divisi/{id}', [\App\Http\Controllers\Api\AdminController::class, 'putDivisi']);

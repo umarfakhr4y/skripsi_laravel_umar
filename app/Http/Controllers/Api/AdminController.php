@@ -57,6 +57,89 @@ class AdminController extends Controller
     }
 
     /**
+     * Get Detail Mentor.
+     */
+    public function getDetailMentor($id)
+    {
+        try {
+            $mentor = \App\Models\mentorMagang::with(['user', 'divisi', 'peserta'])->find($id);
+
+            if (!$mentor) {
+                return response()->json(['success' => false, 'message' => 'Mentor tidak ditemukan.'], 404);
+            }
+
+            $data = [
+                'id' => $mentor->id,
+                'user_id' => $mentor->user_id,
+                'nama_lengkap' => $mentor->nama_lengkap,
+                'nip_karyawan' => $mentor->nip_karyawan,
+                'divisi_id' => $mentor->divisi_id,
+                'divisi' => $mentor->divisi ? $mentor->divisi->nama_divisi : '-',
+                'email' => $mentor->user ? $mentor->user->email : null,
+                'profile_picture_url' => $mentor->profile_picture ? asset('storage/' . $mentor->profile_picture) : null,
+                'jumlah_peserta' => $mentor->peserta->count(),
+                'peserta' => $mentor->peserta->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'nama_lengkap' => $p->nama_lengkap,
+                        'universitas' => $p->universitas,
+                        'profile_picture_url' => $p->profile_picture ? asset('storage/' . $p->profile_picture) : null,
+                    ];
+                })
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data detail mentor',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update Mentor.
+     */
+    public function updateMentor(Request $request, $id)
+    {
+        try {
+            $mentor = \App\Models\mentorMagang::find($id);
+
+            if (!$mentor) {
+                return response()->json(['success' => false, 'message' => 'Mentor tidak ditemukan.'], 404);
+            }
+
+            $request->validate([
+                'nama_lengkap' => 'required|string|max:255',
+                'nip_karyawan' => 'nullable|string|max:255',
+                'divisi_id' => 'nullable|exists:divisis,id',
+            ]);
+
+            $mentor->update([
+                'nama_lengkap' => $request->nama_lengkap,
+                'nip_karyawan' => $request->nip_karyawan,
+                'divisi_id' => $request->divisi_id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil mengubah data mentor',
+                'data' => $mentor
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengubah data mentor',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get Detail Peserta.
      */
     public function getDetailPeserta($id)
