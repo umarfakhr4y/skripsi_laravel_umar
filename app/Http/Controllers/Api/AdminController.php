@@ -181,7 +181,8 @@ class AdminController extends Controller
                 'periode_masuk' => $peserta->periode_masuk ? \Carbon\Carbon::parse($peserta->periode_masuk)->format('d M Y') : null,
                 'periode_keluar' => $peserta->periode_keluar ? \Carbon\Carbon::parse($peserta->periode_keluar)->format('d M Y') : null,
                 'no_telpon' => $peserta->no_telpon,
-                'status' => $peserta->status,
+                'status' => $peserta->status ? 'Aktif' : 'Nonaktif',
+                'is_active' => (bool) $peserta->status,
                 'alamat' => $peserta->alamat,
                 'email' => $peserta->user ? $peserta->user->email : null,
                 'profile_picture_url' => $peserta->profile_picture ? asset('storage/' . $peserta->profile_picture) : null,
@@ -237,6 +238,38 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengubah data peserta',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Toggle status peserta magang (Aktif / Nonaktif).
+     */
+    public function toggleStatusPeserta($id)
+    {
+        try {
+            $peserta = \App\Models\pesertaMagang::find($id);
+
+            if (!$peserta) {
+                return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan.'], 404);
+            }
+
+            // Toggle the boolean status
+            $peserta->status = !$peserta->status;
+            $peserta->save();
+
+            $statusText = $peserta->status ? 'Aktif' : 'Nonaktif';
+
+            return response()->json([
+                'success' => true,
+                'message' => "Status peserta berhasil diubah menjadi $statusText",
+                'data' => $peserta
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengubah status peserta',
                 'error' => $e->getMessage()
             ], 500);
         }
