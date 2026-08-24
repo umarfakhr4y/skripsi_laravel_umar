@@ -57,6 +57,109 @@ class AdminController extends Controller
     }
 
     /**
+     * Get Detail Peserta.
+     */
+    public function getDetailPeserta($id)
+    {
+        try {
+            $peserta = \App\Models\pesertaMagang::with(['user'])->find($id);
+
+            if (!$peserta) {
+                return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan.'], 404);
+            }
+
+            $tugas = \App\Models\Penugasan::where('peserta_magang_id', $peserta->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $bulanIni = \Carbon\Carbon::now()->month;
+            $tahunIni = \Carbon\Carbon::now()->year;
+
+            $absensiBulanIni = \App\Models\Absensi::where('peserta_magang_id', $peserta->id)
+                ->whereMonth('tanggal', $bulanIni)
+                ->whereYear('tanggal', $tahunIni)
+                ->get();
+
+            $rekapAbsensi = [
+                'hadir' => $absensiBulanIni->where('status', 'hadir')->count(),
+                'izin' => $absensiBulanIni->where('status', 'izin')->count(),
+                'sakit' => $absensiBulanIni->where('status', 'sakit')->count(),
+                'telat' => $absensiBulanIni->where('status', 'telat')->count(),
+                'alpa' => $absensiBulanIni->where('status', 'alpa')->count(),
+            ];
+
+            $data = [
+                'id' => $peserta->id,
+                'user_id' => $peserta->user_id,
+                'nama_lengkap' => $peserta->nama_lengkap,
+                'nim' => $peserta->nim,
+                'universitas' => $peserta->universitas,
+                'prodi' => $peserta->prodi,
+                'periode_masuk' => $peserta->periode_masuk ? \Carbon\Carbon::parse($peserta->periode_masuk)->format('d M Y') : null,
+                'periode_keluar' => $peserta->periode_keluar ? \Carbon\Carbon::parse($peserta->periode_keluar)->format('d M Y') : null,
+                'no_telpon' => $peserta->no_telpon,
+                'status' => $peserta->status,
+                'alamat' => $peserta->alamat,
+                'email' => $peserta->user ? $peserta->user->email : null,
+                'profile_picture_url' => $peserta->profile_picture ? asset('storage/' . $peserta->profile_picture) : null,
+                'tugas' => $tugas,
+                'rekap_absensi' => $rekapAbsensi
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data detail peserta',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update Peserta.
+     */
+    public function updatePeserta(Request $request, $id)
+    {
+        try {
+            $peserta = \App\Models\pesertaMagang::find($id);
+
+            if (!$peserta) {
+                return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan.'], 404);
+            }
+
+            $request->validate([
+                'nama_lengkap' => 'required|string|max:255',
+                'universitas' => 'nullable|string|max:255',
+                'prodi' => 'nullable|string|max:255',
+                'no_telpon' => 'nullable|string|max:20',
+            ]);
+
+            $peserta->update([
+                'nama_lengkap' => $request->nama_lengkap,
+                'universitas' => $request->universitas,
+                'prodi' => $request->prodi,
+                'no_telpon' => $request->no_telpon,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil mengubah data peserta',
+                'data' => $peserta
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengubah data peserta',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get all Divisi.
      */
     public function getDivisi(Request $request)
