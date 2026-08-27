@@ -35,6 +35,105 @@ class AdminController extends Controller
     }
 
     /**
+     * Get pending registrations (Peserta dengan status = 0 & mentor_magang_id = null)
+     */
+    public function getPendingRegistrations(Request $request)
+    {
+        try {
+            $pendingPeserta = pesertaMagang::with('user')
+                ->where('status', 0)
+                ->whereNull('mentor_magang_id')
+                ->get();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil mengambil pendaftaran pending',
+                'data' => $pendingPeserta
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil pendaftaran pending',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Approve pending registration and assign mentor
+     */
+    public function approveRegistration(Request $request, $id)
+    {
+        try {
+            $peserta = pesertaMagang::find($id);
+            if (!$peserta) {
+                return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan.'], 404);
+            }
+
+            $request->validate([
+                'mentor_magang_id' => 'required|exists:mentor_magangs,id',
+            ]);
+
+            $peserta->update([
+                'mentor_magang_id' => $request->mentor_magang_id,
+                'status' => 1,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Peserta berhasil disetujui',
+                'data' => $peserta
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyetujui peserta',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reject pending registration (Hard Delete)
+     */
+    public function rejectRegistration($id)
+    {
+        try {
+            DB::beginTransaction();
+            
+            $peserta = pesertaMagang::find($id);
+            if (!$peserta) {
+                return response()->json(['success' => false, 'message' => 'Peserta tidak ditemukan.'], 404);
+            }
+
+            $userId = $peserta->user_id;
+            
+            // Delete peserta magang
+            $peserta->delete();
+            
+            // Delete user account
+            $user = User::find($userId);
+            if ($user) {
+                $user->delete();
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pendaftaran peserta berhasil ditolak dan dihapus.',
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menolak peserta',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get all Mentor.
      */
     public function getMentor(Request $request)

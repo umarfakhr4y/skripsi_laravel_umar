@@ -20,6 +20,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Rute Admin
     Route::get('/admin/peserta', [\App\Http\Controllers\Api\AdminController::class, 'getPeserta']);
+    Route::get('/admin/pending-registrations', [\App\Http\Controllers\Api\AdminController::class, 'getPendingRegistrations']);
+    Route::put('/admin/pending-registrations/{id}/approve', [\App\Http\Controllers\Api\AdminController::class, 'approveRegistration']);
+    Route::delete('/admin/pending-registrations/{id}/reject', [\App\Http\Controllers\Api\AdminController::class, 'rejectRegistration']);
     Route::get('/admin/peserta/{id}', [\App\Http\Controllers\Api\AdminController::class, 'getDetailPeserta']);
     Route::put('/admin/peserta/{id}', [\App\Http\Controllers\Api\AdminController::class, 'updatePeserta']);
     Route::put('/admin/peserta/{id}/toggle-status', [\App\Http\Controllers\Api\AdminController::class, 'toggleStatusPeserta']);
