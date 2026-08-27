@@ -440,4 +440,79 @@ class AdminController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get Laporan Harian by Peserta (For Admin)
+     */
+    public function getLaporanHarianByPeserta(Request $request, $peserta_id)
+    {
+        try {
+            $laporan = \App\Models\LaporanHarian::with(['peserta'])
+                ->where('peserta_magang_id', $peserta_id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $data = $laporan->map(function ($lap) {
+                return [
+                    'id' => $lap->id,
+                    'peserta_id' => $lap->peserta_magang_id,
+                    'nama_peserta' => $lap->peserta ? $lap->peserta->nama_lengkap : 'Tanpa Nama',
+                    'profile_picture_url' => $lap->peserta && $lap->peserta->profile_picture ? asset('storage/' . $lap->peserta->profile_picture) : null,
+                    'laporan' => $lap->laporan,
+                    'komentar_mentor' => $lap->komentar_mentor,
+                    'tanggal' => $lap->created_at ? $lap->created_at->format('Y-m-d H:i:s') : null
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data laporan',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get Bimbingan by Peserta (For Admin)
+     */
+    public function getBimbinganByPeserta(Request $request, $peserta_id)
+    {
+        try {
+            $bimbingan = \App\Models\Bimbingan::with(['peserta', 'mentor.user'])
+                ->where('peserta_magang_id', $peserta_id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $data = $bimbingan->map(function ($bim) {
+                return [
+                    'id' => $bim->id,
+                    'peserta_id' => $bim->peserta_magang_id,
+                    'peserta' => [
+                        'nama' => $bim->peserta ? $bim->peserta->nama_lengkap : 'Tanpa Nama',
+                        'profile_picture_url' => $bim->peserta && $bim->peserta->profile_picture ? asset('storage/' . $bim->peserta->profile_picture) : null,
+                    ],
+                    'topik' => $bim->topik,
+                    'tanggal' => $bim->tanggal ? \Carbon\Carbon::parse($bim->tanggal)->format('d M Y') : null,
+                    'link_meet' => $bim->link_meet,
+                    'status' => $bim->status
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data bimbingan',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
