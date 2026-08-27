@@ -151,6 +151,19 @@ class PersuratanController extends Controller
         ]);
     }
 
+    // Admin melihat daftar seluruh persuratan peserta
+    public function indexAdmin(Request $request)
+    {
+        $surat = Persuratan::with('peserta.user')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $surat
+        ]);
+    }
+
     // Mentor mengupdate status persuratan
     public function updateStatus(Request $request, $id)
     {

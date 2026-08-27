@@ -152,6 +152,19 @@ class PerizinanController extends Controller
         ]);
     }
 
+    // Admin melihat daftar seluruh perizinan peserta
+    public function indexAdmin(Request $request)
+    {
+        $perizinan = Perizinan::with('peserta.user')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $perizinan
+        ]);
+    }
+
     // Mentor mengupdate status perizinan
     public function updateStatus(Request $request, $id)
     {
