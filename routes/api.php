@@ -9,6 +9,9 @@ use App\Http\Resources\UserResource;
 //login awal
 Route::post('/login', [AuthController::class, 'login']);
 
+//register peserta
+Route::post('/register', [AuthController::class, 'register']);
+
 //update token fcm
 Route::middleware('auth:sanctum')->post('/update-fcm-token', [AuthController::class, 'updateFcmToken']);
 
@@ -29,7 +32,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/admin/divisi/{id}', [\App\Http\Controllers\Api\AdminController::class, 'deleteDivisi']);
     Route::get('/admin/kehadiran-hari-ini', [\App\Http\Controllers\Api\AdminController::class, 'getKehadiranHariIni']);
     Route::get('/admin/tugas', [\App\Http\Controllers\Api\AdminController::class, 'getTugas']);
-
+    Route::get('/admin/laporan/{peserta_id}', [\App\Http\Controllers\Api\AdminController::class, 'getLaporanHarianByPeserta']);
+    Route::get('/admin/bimbingan/{peserta_id}', [\App\Http\Controllers\Api\AdminController::class, 'getBimbinganByPeserta']);
+    Route::get('/admin/persuratan', [\App\Http\Controllers\Api\PersuratanController::class, 'indexAdmin']);
+    Route::get('/admin/perizinan', [\App\Http\Controllers\Api\PerizinanController::class, 'indexAdmin']);
     // ambil data login
     Route::get('/user', function (Request $request) {
         $user = $request->user()->load(['peserta', 'mentor.divisi']);

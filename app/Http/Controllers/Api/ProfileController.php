@@ -17,7 +17,7 @@ class ProfileController extends Controller
      */
     public function updateData(Request $request)
     {
-        $user = clone $request->user();
+        $user = $request->user();
 
         // Validasi input
         $request->validate([
@@ -39,6 +39,12 @@ class ProfileController extends Controller
             $user->password = Hash::make($request->password);
         }
         $user->save();
+        
+        \Illuminate\Support\Facades\Log::info('ProfileController updateData called', [
+            'user_id' => $user->id,
+            'user_role' => $user->role,
+            'request_data' => $request->all(),
+        ]);
 
         if ($user->role === 'mentor') {
             $mentor = mentorMagang::where('user_id', $user->id)->first();
@@ -52,19 +58,33 @@ class ProfileController extends Controller
         } elseif ($user->role === 'peserta') {
             $peserta = pesertaMagang::where('user_id', $user->id)->first();
             if ($peserta) {
-                if ($request->has('nama_lengkap')) $peserta->nama_lengkap = $request->nama_lengkap;
-                if ($request->has('no_telpon')) $peserta->no_telpon = $request->no_telpon;
-                if ($request->has('alamat')) $peserta->alamat = $request->alamat;
-                if ($request->has('nim')) $peserta->nim = $request->nim;
-                if ($request->has('universitas')) $peserta->universitas = $request->universitas;
-                if ($request->has('prodi')) $peserta->prodi = $request->prodi;
-                $peserta->save();
+                if ($request->filled('nama_lengkap')) $peserta->nama_lengkap = $request->nama_lengkap;
+                if ($request->filled('no_telpon')) $peserta->no_telpon = $request->no_telpon;
+                if ($request->filled('alamat')) $peserta->alamat = $request->alamat;
+                if ($request->filled('nim')) $peserta->nim = $request->nim;
+                if ($request->filled('universitas')) $peserta->universitas = $request->universitas;
+                if ($request->filled('prodi')) $peserta->prodi = $request->prodi;
+                
+                \Illuminate\Support\Facades\Log::info('Updating Peserta', [
+                    'request' => $request->all(),
+                    'peserta_before' => $peserta->getAttributes(),
+                ]);
+
+                $saved = $peserta->save();
+
+                \Illuminate\Support\Facades\Log::info('Peserta saved', ['saved' => $saved]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data peserta tidak ditemukan.'
+                ], 404);
             }
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Profile berhasil diupdate.'
+            'message' => 'Profile berhasil diupdate.',
+            'data' => $user->role === 'peserta' ? $peserta : null
         ]);
     }
 
@@ -73,7 +93,7 @@ class ProfileController extends Controller
      */
     public function updatePicture(Request $request)
     {
-        $user = clone $request->user();
+        $user = $request->user();
 
         $request->validate([
             'profile_picture' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // Max 2MB
