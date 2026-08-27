@@ -173,6 +173,7 @@ class MentorController extends Controller
                 'id' => $lap->id,
                 'peserta_id' => $lap->peserta_magang_id,
                 'nama_peserta' => $lap->peserta ? $lap->peserta->nama_lengkap : 'Tanpa Nama',
+                'profile_picture_url' => $lap->peserta && $lap->peserta->profile_picture ? asset('storage/' . $lap->peserta->profile_picture) : null,
                 'laporan' => $lap->laporan,
                 'komentar_mentor' => $lap->komentar_mentor,
                 'tanggal' => $lap->created_at ? $lap->created_at->format('Y-m-d H:i:s') : null
@@ -207,6 +208,7 @@ class MentorController extends Controller
                 'id' => $lap->id,
                 'peserta_id' => $lap->peserta_magang_id,
                 'nama_peserta' => $lap->peserta ? $lap->peserta->nama_lengkap : 'Tanpa Nama',
+                'profile_picture_url' => $lap->peserta && $lap->peserta->profile_picture ? asset('storage/' . $lap->peserta->profile_picture) : null,
                 'laporan' => $lap->laporan,
                 'komentar_mentor' => $lap->komentar_mentor,
                 'tanggal' => $lap->created_at ? $lap->created_at->format('Y-m-d H:i:s') : null
