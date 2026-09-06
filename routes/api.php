@@ -94,4 +94,5 @@ Route::middleware('auth:sanctum')->group(function () {
     // Rute Profil
     Route::post('/profile/update-data', [\App\Http\Controllers\Api\ProfileController::class, 'updateData']);
     Route::post('/profile/update-picture', [\App\Http\Controllers\Api\ProfileController::class, 'updatePicture']);
+    Route::post('/profile/update-password', [\App\Http\Controllers\Api\ProfileController::class, 'updatePassword']);
 });
