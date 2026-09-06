@@ -156,6 +156,52 @@ class AdminController extends Controller
     }
 
     /**
+     * Create new Mentor.
+     */
+    public function postMentor(Request $request)
+    {
+        try {
+            $request->validate([
+                'nama_lengkap' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => 'required|string|min:6',
+                'nip_karyawan' => 'nullable|string|max:255',
+                'divisi_id' => 'required|exists:divisis,id',
+            ]);
+
+            \Illuminate\Support\Facades\DB::beginTransaction();
+
+            $user = User::create([
+                'email' => $request->email,
+                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                'role' => 'mentor',
+            ]);
+
+            $mentor = mentorMagang::create([
+                'user_id' => $user->id,
+                'nama_lengkap' => $request->nama_lengkap,
+                'nip_karyawan' => $request->nip_karyawan ?? '-',
+                'divisi_id' => $request->divisi_id,
+            ]);
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil menambah mentor baru',
+                'data' => $mentor
+            ], 201);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambah data mentor',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get Detail Mentor.
      */
     public function getDetailMentor($id)
@@ -280,7 +326,7 @@ class AdminController extends Controller
                 'periode_masuk' => $peserta->periode_masuk ? \Carbon\Carbon::parse($peserta->periode_masuk)->format('d M Y') : null,
                 'periode_keluar' => $peserta->periode_keluar ? \Carbon\Carbon::parse($peserta->periode_keluar)->format('d M Y') : null,
                 'no_telpon' => $peserta->no_telpon,
-                'status' => $peserta->status ? 'Aktif' : 'Nonaktif',
+                'status' => $peserta->status ? 1 : 0,
                 'is_active' => (bool) $peserta->status,
                 'alamat' => $peserta->alamat,
                 'email' => $peserta->user ? $peserta->user->email : null,

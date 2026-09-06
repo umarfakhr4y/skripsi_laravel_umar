@@ -27,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/admin/peserta/{id}', [\App\Http\Controllers\Api\AdminController::class, 'updatePeserta']);
     Route::put('/admin/peserta/{id}/toggle-status', [\App\Http\Controllers\Api\AdminController::class, 'toggleStatusPeserta']);
     Route::get('/admin/mentor', [\App\Http\Controllers\Api\AdminController::class, 'getMentor']);
+    Route::post('/admin/mentor', [\App\Http\Controllers\Api\AdminController::class, 'postMentor']);
     Route::get('/admin/mentor/{id}', [\App\Http\Controllers\Api\AdminController::class, 'getDetailMentor']);
     Route::put('/admin/mentor/{id}', [\App\Http\Controllers\Api\AdminController::class, 'updateMentor']);
     Route::get('/admin/divisi', [\App\Http\Controllers\Api\AdminController::class, 'getDivisi']);
