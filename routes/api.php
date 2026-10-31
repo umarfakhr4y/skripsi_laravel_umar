@@ -57,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/mentor/peserta/{id}', [\App\Http\Controllers\Api\MentorController::class, 'getDetailPeserta']);
     Route::get('/mentor/laporan', [\App\Http\Controllers\Api\MentorController::class, 'getLaporanHarian']);
     Route::get('/mentor/laporan/{peserta_id}', [\App\Http\Controllers\Api\MentorController::class, 'getLaporanHarianByPeserta']);
+    Route::put('/mentor/laporan/{id}/komentar', [\App\Http\Controllers\Api\MentorController::class, 'updateKomentarLaporan']);
     Route::post('/mentor/evaluasi', [\App\Http\Controllers\Api\MentorController::class, 'storeEvaluasiBulanan']);
     Route::get('/mentor/evaluasi', [\App\Http\Controllers\Api\MentorController::class, 'getRiwayatEvaluasi']);
     Route::get('/mentor/evaluasi/{peserta_id}', [\App\Http\Controllers\Api\MentorController::class, 'getRiwayatEvaluasi']);

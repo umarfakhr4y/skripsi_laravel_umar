@@ -142,29 +142,40 @@ class AuthController extends Controller
      * Logout 
      */
     public function logout(Request $request)
-{
-    /** @var \App\Models\User $user */
-    $user = $request->user();
+    {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
 
-    if ($user && $user->currentAccessToken()) {
-        // Menghapus token yang sedang digunakan
-        $user->currentAccessToken()->delete();
+        if ($user) {
+            // Hapus FCM token agar perangkat tidak menerima notifikasi akun setelah logout
+            $user->update(['fcm_token' => null]);
+
+            if ($user->currentAccessToken()) {
+                // Menghapus token yang sedang digunakan
+                $user->currentAccessToken()->delete();
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Berhasil logout'
+        ], 200);
     }
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Berhasil logout'
-    ], 200);
-}
+    //update token fcm
+    public function updateFcmToken(Request $request)
+    {
+        $request->validate(['fcm_token' => 'required|string']);
+        $user = $request->user();
 
-//update token fcm
-public function updateFcmToken(Request $request)
-{
-    $request->validate(['fcm_token' => 'required|string']);
-    $user = $request->user();
-    $user->update(['fcm_token' => $request->fcm_token]);
-    
-    return response()->json(['success' => true, 'message' => 'FCM Token updated']);
-}
+        // Bersihkan token yang sama dari user lain (misal login ganti akun di hp yang sama)
+        User::where('id', '!=', $user->id)
+            ->where('fcm_token', $request->fcm_token)
+            ->update(['fcm_token' => null]);
+
+        $user->update(['fcm_token' => $request->fcm_token]);
+        
+        return response()->json(['success' => true, 'message' => 'FCM Token updated']);
+    }
 
 }

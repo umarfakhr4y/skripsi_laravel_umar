@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\EvaluasiBulanan;
+use App\Services\FirebaseNotificationService;
 
 class PesertaController extends Controller
 {
@@ -112,29 +113,16 @@ class PesertaController extends Controller
                 ]);
 
                 $mentorUser = \App\Models\User::find($mentor->user_id);
-                if ($mentorUser && $mentorUser->fcm_token) {
-                    try {
-                        $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
-                        $messaging = $factory->createMessaging();
-                        $notification = \Kreait\Firebase\Messaging\Notification::create(
-                            'Permintaan Bimbingan Baru!', 
-                            $peserta->nama_lengkap . " mengajukan bimbingan: " . $request->topik
-                        );
-                        $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
-                            'priority' => 'high',
-                            'notification' => ['sound' => 'default']
-                        ]);
-                        $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $mentorUser->fcm_token)
-                            ->withNotification($notification)
-                            ->withAndroidConfig($androidConfig)
-                            ->withData([
-                                'tipe' => 'bimbingan_baru', 
-                                'bimbingan_id' => (string) $bimbingan->id
-                            ]);
-                        $messaging->send($message);
-                    } catch (\Exception $e) {
-                        \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
-                    }
+                if ($mentorUser) {
+                    FirebaseNotificationService::sendToUser(
+                        $mentorUser,
+                        'Permintaan Bimbingan Baru!',
+                        $peserta->nama_lengkap . " mengajukan bimbingan: " . $request->topik,
+                        [
+                            'tipe' => 'bimbingan_baru',
+                            'bimbingan_id' => (string) $bimbingan->id,
+                        ]
+                    );
                 }
             }
         }

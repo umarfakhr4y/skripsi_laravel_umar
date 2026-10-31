@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\mentorMagang;
 use App\Models\PengaturanAbsensi;
 use Carbon\Carbon;
+use App\Services\FirebaseNotificationService;
 
 class MentorController extends Controller
 {
@@ -272,26 +273,16 @@ class MentorController extends Controller
             ]);
 
             $pesertaUser = \App\Models\User::find($peserta->user_id);
-            if ($pesertaUser && $pesertaUser->fcm_token) {
-                try {
-                    $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
-                    $messaging = $factory->createMessaging();
-                    $notification = \Kreait\Firebase\Messaging\Notification::create($notifTitle, $notifPesan);
-                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
-                        'priority' => 'high',
-                        'notification' => ['sound' => 'default']
-                    ]);
-                    $fcmMessage = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $pesertaUser->fcm_token)
-                        ->withNotification($notification)
-                        ->withAndroidConfig($androidConfig)
-                        ->withData([
-                            'tipe' => 'evaluasi_baru', 
-                            'evaluasi_id' => (string) $evaluasi->id
-                        ]);
-                    $messaging->send($fcmMessage);
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
-                }
+            if ($pesertaUser) {
+                FirebaseNotificationService::sendToUser(
+                    $pesertaUser,
+                    $notifTitle,
+                    $notifPesan,
+                    [
+                        'tipe' => 'evaluasi_baru',
+                        'evaluasi_id' => (string) $evaluasi->id,
+                    ]
+                );
             }
         }
 
@@ -448,26 +439,16 @@ class MentorController extends Controller
             ]);
 
             $pesertaUser = \App\Models\User::find($peserta->user_id);
-            if ($pesertaUser && $pesertaUser->fcm_token) {
-                try {
-                    $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
-                    $messaging = $factory->createMessaging();
-                    $notification = \Kreait\Firebase\Messaging\Notification::create($notifTitle, $notifPesan);
-                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
-                        'priority' => 'high',
-                        'notification' => ['sound' => 'default']
-                    ]);
-                    $fcmMessage = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $pesertaUser->fcm_token)
-                        ->withNotification($notification)
-                        ->withAndroidConfig($androidConfig)
-                        ->withData([
-                            'tipe' => 'update_bimbingan', 
-                            'bimbingan_id' => (string) $bimbingan->id
-                        ]);
-                    $messaging->send($fcmMessage);
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
-                }
+            if ($pesertaUser) {
+                FirebaseNotificationService::sendToUser(
+                    $pesertaUser,
+                    $notifTitle,
+                    $notifPesan,
+                    [
+                        'tipe' => 'update_bimbingan',
+                        'bimbingan_id' => (string) $bimbingan->id,
+                    ]
+                );
             }
         }
 
@@ -530,5 +511,58 @@ class MentorController extends Controller
             'message' => 'Batas waktu absen berhasil diperbarui dan akan berlaku mulai besok.',
             'data' => $batas
         ]);
+    }
+
+    /**
+     * Update komentar mentor pada laporan harian
+     */
+    public function updateKomentarLaporan(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'komentar' => 'required|string',
+            ]);
+
+            $user = $request->user();
+            $mentor = mentorMagang::where('user_id', $user->id)->first();
+            if (!$mentor) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya mentor yang dapat memberi komentar.',
+                ], 403);
+            }
+
+            $laporan = \App\Models\LaporanHarian::find($id);
+            if (!$laporan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Laporan tidak ditemukan',
+                ], 404);
+            }
+
+            // Pastikan peserta yang laporannya dikomentari adalah peserta bimbingan mentor ini
+            $peserta = \App\Models\pesertaMagang::find($laporan->peserta_magang_id);
+            if (!$peserta || $peserta->mentor_magang_id != $mentor->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda hanya dapat mengomentari laporan peserta bimbingan Anda.',
+                ], 403);
+            }
+
+            $laporan->komentar_mentor = $request->komentar;
+            $laporan->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Komentar berhasil disimpan',
+                'data' => $laporan
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyimpan komentar',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

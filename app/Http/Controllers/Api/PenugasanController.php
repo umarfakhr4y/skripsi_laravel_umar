@@ -11,9 +11,7 @@ use App\Models\Notifikasi;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use App\Models\User;
-use Kreait\Firebase\Factory;
-use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification as FcmNotification;
+use App\Services\FirebaseNotificationService;
 
 class PenugasanController extends Controller
 {
@@ -176,35 +174,16 @@ class PenugasanController extends Controller
 
             // Push Notification FCM
             $pesertaUser = User::find($peserta->user_id);
-            if ($pesertaUser && $pesertaUser->fcm_token) {
-                try {
-                    $factory = (new Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
-                    $messaging = $factory->createMessaging();
-
-                    $notification = FcmNotification::create(
-                        'Tugas Baru Diberikan!', 
-                        "Mentor telah memberikan tugas baru: " . $request->judul_tugas
-                    );
-
-                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
-                        'priority' => 'high',
-                        'notification' => [
-                            'sound' => 'default',
-                        ],
-                    ]);
-
-                    $message = CloudMessage::withTarget('token', $pesertaUser->fcm_token)
-                        ->withNotification($notification)
-                        ->withAndroidConfig($androidConfig)
-                        ->withData([
-                            'tipe' => 'tugas_baru',
-                            'penugasan_id' => (string) $penugasan->id
-                        ]);
-
-                    $messaging->send($message);
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
-                }
+            if ($pesertaUser) {
+                FirebaseNotificationService::sendToUser(
+                    $pesertaUser,
+                    'Tugas Baru Diberikan!',
+                    "Mentor telah memberikan tugas baru: " . $request->judul_tugas,
+                    [
+                        'tipe' => 'tugas_baru',
+                        'penugasan_id' => (string) $penugasan->id,
+                    ]
+                );
             }
         }
 
@@ -472,29 +451,16 @@ class PenugasanController extends Controller
             ]);
 
             $mentorUser = User::find($mentorTugas->user_id);
-            if ($mentorUser && $mentorUser->fcm_token) {
-                try {
-                    $factory = (new Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
-                    $messaging = $factory->createMessaging();
-                    $notification = FcmNotification::create(
-                        'Tugas Dikumpulkan!', 
-                        $peserta->nama_lengkap . " telah mengumpulkan tugas: " . $penugasan->judul_tugas
-                    );
-                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
-                        'priority' => 'high',
-                        'notification' => ['sound' => 'default']
-                    ]);
-                    $message = CloudMessage::withTarget('token', $mentorUser->fcm_token)
-                        ->withNotification($notification)
-                        ->withAndroidConfig($androidConfig)
-                        ->withData([
-                            'tipe' => 'tugas_dikumpulkan', 
-                            'penugasan_id' => (string) $penugasan->id
-                        ]);
-                    $messaging->send($message);
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
-                }
+            if ($mentorUser) {
+                FirebaseNotificationService::sendToUser(
+                    $mentorUser,
+                    'Tugas Dikumpulkan!',
+                    $peserta->nama_lengkap . " telah mengumpulkan tugas: " . $penugasan->judul_tugas,
+                    [
+                        'tipe' => 'tugas_dikumpulkan',
+                        'penugasan_id' => (string) $penugasan->id,
+                    ]
+                );
             }
         }
 
@@ -572,26 +538,16 @@ class PenugasanController extends Controller
             ]);
 
             $pesertaUser = User::find($peserta->user_id);
-            if ($pesertaUser && $pesertaUser->fcm_token) {
-                try {
-                    $factory = (new Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
-                    $messaging = $factory->createMessaging();
-                    $notification = FcmNotification::create($notifTitle, $notifPesan);
-                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
-                        'priority' => 'high',
-                        'notification' => ['sound' => 'default']
-                    ]);
-                    $fcmMessage = CloudMessage::withTarget('token', $pesertaUser->fcm_token)
-                        ->withNotification($notification)
-                        ->withAndroidConfig($androidConfig)
-                        ->withData([
-                            'tipe' => 'review_tugas', 
-                            'penugasan_id' => (string) $penugasan->id
-                        ]);
-                    $messaging->send($fcmMessage);
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
-                }
+            if ($pesertaUser) {
+                FirebaseNotificationService::sendToUser(
+                    $pesertaUser,
+                    $notifTitle,
+                    $notifPesan,
+                    [
+                        'tipe' => 'review_tugas',
+                        'penugasan_id' => (string) $penugasan->id,
+                    ]
+                );
             }
         }
 

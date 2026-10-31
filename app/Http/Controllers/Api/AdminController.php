@@ -527,26 +527,28 @@ class AdminController extends Controller
     public function getKehadiranHariIni(Request $request)
     {
         try {
-            $totalActivePeserta = pesertaMagang::where('status', 'Aktif')->count();
+            // Hitung seluruh peserta magang yang ada di database
+            $totalPeserta = pesertaMagang::count();
             
             $today = \Carbon\Carbon::today()->toDateString();
             
-            // Hitung absensi hari ini yang statusnya hadir/terlambat (mengindikasikan masuk)
+            // Hitung absensi unik peserta hari ini yang berstatus hadir atau telat (atau waktu_masuk terisi)
             $hadirHariIni = \App\Models\Absensi::where('tanggal', $today)
                 ->where(function($query) {
-                    $query->where('status', 'like', '%Hadir%')
-                          ->orWhere('status', 'like', '%hadir%')
-                          ->orWhere('status', 'like', '%telat%')
-                          ->orWhere('status', 'like', '%telat%');
-                })->count();
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(status)'), ['hadir', 'telat'])
+                          ->orWhereNotNull('waktu_masuk');
+                })
+                ->distinct('peserta_magang_id')
+                ->count('peserta_magang_id');
                 
-            $persentase = $totalActivePeserta > 0 ? round(($hadirHariIni / $totalActivePeserta) * 100) : 0;
+            $persentase = $totalPeserta > 0 ? round(($hadirHariIni / $totalPeserta) * 100) : 0;
             
             return response()->json([
                 'success' => true,
                 'message' => 'Berhasil mengambil data kehadiran hari ini',
                 'data' => [
-                    'total_peserta_aktif' => $totalActivePeserta,
+                    'total_peserta' => $totalPeserta,
+                    'total_peserta_aktif' => $totalPeserta,
                     'hadir_hari_ini' => $hadirHariIni,
                     'persentase' => $persentase
                 ]

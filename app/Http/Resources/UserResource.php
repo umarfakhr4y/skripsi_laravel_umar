@@ -14,10 +14,23 @@ class UserResource extends JsonResource
      */
     public function toArray($request): array
     {
-        $profileData = $this->role === 'peserta' ? $this->peserta : $this->mentor;
-
-        if ($this->role === 'mentor' && $profileData) {
-            $profileData->load('divisi');
+        if ($this->role === 'peserta') {
+            $profileData = $this->peserta;
+        } elseif ($this->role === 'mentor') {
+            $profileData = $this->mentor;
+            if ($profileData) {
+                $profileData->load('divisi');
+            }
+        } elseif ($this->role === 'admin') {
+            $profileData = (object) [
+                'id' => $this->id,
+                'nama_lengkap' => 'Administrator',
+                'email' => $this->email,
+                'profile_picture' => $this->profile_picture,
+                'profile_picture_url' => $this->profile_picture ? asset('storage/' . $this->profile_picture) : null,
+            ];
+        } else {
+            $profileData = null;
         }
 
         $sudahAbsen = false;
@@ -54,9 +67,9 @@ class UserResource extends JsonResource
             }
         }
 
-        if ($profileData && isset($profileData->profile_picture) && $profileData->profile_picture) {
+        if ($profileData && isset($profileData->profile_picture) && $profileData->profile_picture && !isset($profileData->profile_picture_url)) {
             $profileData->profile_picture_url = asset('storage/' . $profileData->profile_picture);
-        } else if ($profileData) {
+        } else if ($profileData && !isset($profileData->profile_picture_url)) {
             $profileData->profile_picture_url = null;
         }
 

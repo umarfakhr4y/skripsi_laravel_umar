@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use App\Models\pesertaMagang;
+use App\Services\FirebaseNotificationService;
 
 class PersuratanController extends Controller
 {
@@ -91,29 +92,16 @@ class PersuratanController extends Controller
                 ]);
 
                 $mentorUser = \App\Models\User::find($mentor->user_id);
-                if ($mentorUser && $mentorUser->fcm_token) {
-                    try {
-                        $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
-                        $messaging = $factory->createMessaging();
-                        $notification = \Kreait\Firebase\Messaging\Notification::create(
-                            'Pengajuan Persuratan Baru!', 
-                            $peserta->nama_lengkap . " mengajukan persuratan: " . $request->jenis_surat
-                        );
-                        $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
-                            'priority' => 'high',
-                            'notification' => ['sound' => 'default']
-                        ]);
-                        $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $mentorUser->fcm_token)
-                            ->withNotification($notification)
-                            ->withAndroidConfig($androidConfig)
-                            ->withData([
-                                'tipe' => 'persuratan_baru', 
-                                'persuratan_id' => (string) $surat->id
-                            ]);
-                        $messaging->send($message);
-                    } catch (\Exception $e) {
-                        \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
-                    }
+                if ($mentorUser) {
+                    FirebaseNotificationService::sendToUser(
+                        $mentorUser,
+                        'Pengajuan Persuratan Baru!',
+                        $peserta->nama_lengkap . " mengajukan persuratan: " . $request->jenis_surat,
+                        [
+                            'tipe' => 'persuratan_baru',
+                            'persuratan_id' => (string) $surat->id,
+                        ]
+                    );
                 }
             }
         }
@@ -223,26 +211,16 @@ class PersuratanController extends Controller
             ]);
 
             $pesertaUser = \App\Models\User::find($peserta->user_id);
-            if ($pesertaUser && $pesertaUser->fcm_token) {
-                try {
-                    $factory = (new \Kreait\Firebase\Factory)->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
-                    $messaging = $factory->createMessaging();
-                    $notification = \Kreait\Firebase\Messaging\Notification::create($notifTitle, $notifPesan);
-                    $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
-                        'priority' => 'high',
-                        'notification' => ['sound' => 'default']
-                    ]);
-                    $fcmMessage = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $pesertaUser->fcm_token)
-                        ->withNotification($notification)
-                        ->withAndroidConfig($androidConfig)
-                        ->withData([
-                            'tipe' => 'update_surat', 
-                            'persuratan_id' => (string) $surat->id
-                        ]);
-                    $messaging->send($fcmMessage);
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("FCM Send Error: " . $e->getMessage());
-                }
+            if ($pesertaUser) {
+                FirebaseNotificationService::sendToUser(
+                    $pesertaUser,
+                    $notifTitle,
+                    $notifPesan,
+                    [
+                        'tipe' => 'update_surat',
+                        'persuratan_id' => (string) $surat->id,
+                    ]
+                );
             }
         }
 
