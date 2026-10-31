@@ -552,6 +552,31 @@ class MentorController extends Controller
             $laporan->komentar_mentor = $request->komentar;
             $laporan->save();
 
+            // Notifikasi ke peserta
+            if ($peserta && $peserta->user_id) {
+                \App\Models\Notifikasi::create([
+                    'user_id' => $peserta->user_id,
+                    'judul' => 'Komentar Laporan Harian',
+                    'pesan' => 'Mentor telah memberikan feedback pada laporan harian Anda: "' . \Illuminate\Support\Str::limit($request->komentar, 60) . '"',
+                    'tipe' => 'laporan',
+                    'data_id' => $laporan->id,
+                    'is_read' => false,
+                ]);
+
+                $userPeserta = \App\Models\User::find($peserta->user_id);
+                if ($userPeserta && $userPeserta->fcm_token) {
+                    FirebaseNotificationService::sendToUser(
+                        $userPeserta,
+                        'Komentar Laporan Harian',
+                        'Mentor telah memberikan feedback pada laporan harian Anda.',
+                        [
+                            'type' => 'laporan',
+                            'laporan_id' => (string) $laporan->id,
+                        ]
+                    );
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Komentar berhasil disimpan',

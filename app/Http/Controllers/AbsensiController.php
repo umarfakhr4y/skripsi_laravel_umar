@@ -53,6 +53,7 @@ class AbsensiController extends Controller
                     'longitude' => $request->longitude ?? $absensi->longitude,
                 ]);
                 return response()->json([
+                    'success' => true,
                     'message' => 'Berhasil melakukan absen pulang', 
                     'data' => $absensi
                 ]);

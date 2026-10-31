@@ -37,6 +37,34 @@ class LaporanHarianController extends Controller
             'laporan' => $request->laporan,
         ]);
 
+        // Notifikasi ke mentor pembimbing
+        if ($peserta->mentor_magang_id) {
+            $mentor = \App\Models\mentorMagang::find($peserta->mentor_magang_id);
+            if ($mentor && $mentor->user_id) {
+                \App\Models\Notifikasi::create([
+                    'user_id' => $mentor->user_id,
+                    'judul' => 'Laporan Harian Baru',
+                    'pesan' => $peserta->nama_lengkap . ' telah mengirimkan laporan harian.',
+                    'tipe' => 'laporan',
+                    'data_id' => $laporan->id,
+                    'is_read' => false,
+                ]);
+
+                $userMentor = \App\Models\User::find($mentor->user_id);
+                if ($userMentor && $userMentor->fcm_token) {
+                    \App\Services\FirebaseNotificationService::sendToUser(
+                        $userMentor,
+                        'Laporan Harian Baru',
+                        $peserta->nama_lengkap . ' telah mengirimkan laporan harian.',
+                        [
+                            'type' => 'laporan',
+                            'peserta_id' => (string) $peserta->id,
+                        ]
+                    );
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Laporan harian berhasil disimpan',
