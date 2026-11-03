@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use app\Models\mentorMagang;
 use Illuminate\Database\Eloquent\Model;
 
 class Divisi extends Model

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use App\Models\Absensi;
-use App\Models\PesertaMagang;
+use App\Models\pesertaMagang;
 use Carbon\Carbon;
 
 class AbsensiController extends Controller
@@ -24,7 +24,7 @@ class AbsensiController extends Controller
         $user = $request->user();
         
         // Pastikan yang login adalah peserta magang
-        $peserta = PesertaMagang::where('user_id', $user->id)->first();
+        $peserta = pesertaMagang::where('user_id', $user->id)->first();
         if (!$peserta) {
             return response()->json(['message' => 'Hanya peserta magang yang dapat melakukan absen.'], 403);
         }
@@ -114,7 +114,7 @@ class AbsensiController extends Controller
     public function getRiwayatPeserta(Request $request)
     {
         $user = $request->user();
-        $peserta = PesertaMagang::where('user_id', $user->id)->first();
+        $peserta = pesertaMagang::where('user_id', $user->id)->first();
         if (!$peserta) {
             return response()->json([
                 'success' => false,

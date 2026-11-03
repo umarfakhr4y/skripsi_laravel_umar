@@ -18,6 +18,6 @@ class Perizinan extends Model
 
     public function peserta()
     {
-        return $this->belongsTo(PesertaMagang::class, 'peserta_magang_id');
+        return $this->belongsTo(pesertaMagang::class, 'peserta_magang_id');
     }
 }
