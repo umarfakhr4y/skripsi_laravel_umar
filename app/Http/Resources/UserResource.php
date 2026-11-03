@@ -37,8 +37,42 @@ class UserResource extends JsonResource
         $dataAbsenHariIni = null;
         $sudahIsiLaporan = false;
         $batasWaktuAbsen = '08:00:00';
+        $ringkasanMingguan = [
+            'tugas_selesai' => 0,
+            'kehadiran_tepat_waktu' => 0,
+        ];
 
         if ($this->role === 'peserta' && $this->peserta) {
+            $now = \Carbon\Carbon::now();
+            $startOfWeek = $now->copy()->startOfWeek()->toDateString();
+            $endOfWeek = $now->copy()->endOfWeek()->toDateString();
+
+            // Hitung kehadiran masuk tepat waktu (tidak telat) di minggu ini
+            $kehadiranTepatWaktu = \App\Models\Absensi::where('peserta_magang_id', $this->peserta->id)
+                ->whereBetween('tanggal', [$startOfWeek, $endOfWeek])
+                ->where('status', 'hadir')
+                ->whereNotNull('waktu_masuk')
+                ->count();
+
+            // Hitung tugas selesai di minggu ini
+            $tugasSelesai = \App\Models\Penugasan::where('peserta_magang_id', $this->peserta->id)
+                ->where(function ($q) {
+                    $q->where('status_tugas', 'Selesai')
+                      ->orWhere('status_tugas', 'selesai')
+                      ->orWhere('status_tugas', 'completed');
+                })
+                ->where(function ($q) use ($startOfWeek, $endOfWeek, $now) {
+                    $q->whereBetween('updated_at', [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()])
+                      ->orWhereBetween('created_at', [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()])
+                      ->orWhereBetween('deadline', [$startOfWeek, $endOfWeek]);
+                })
+                ->count();
+
+            $ringkasanMingguan = [
+                'tugas_selesai' => $tugasSelesai,
+                'kehadiran_tepat_waktu' => $kehadiranTepatWaktu,
+            ];
+
             $absen = \App\Models\Absensi::where('peserta_magang_id', $this->peserta->id)
                             ->where('tanggal', \Carbon\Carbon::now()->toDateString())
                             ->first();
@@ -81,6 +115,7 @@ class UserResource extends JsonResource
             'sudah_isi_laporan' => $sudahIsiLaporan,
             'absen_hari_ini' => $dataAbsenHariIni,
             'batas_waktu_absen' => substr($batasWaktuAbsen, 0, 5),
+            'ringkasan_mingguan' => $ringkasanMingguan,
             'data'       => $profileData,
         ];
     }

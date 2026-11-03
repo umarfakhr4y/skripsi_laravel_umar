@@ -110,4 +110,25 @@ class AbsensiController extends Controller
             'data' => $absen_baru
         ], 201);
     }
+
+    public function getRiwayatPeserta(Request $request)
+    {
+        $user = $request->user();
+        $peserta = PesertaMagang::where('user_id', $user->id)->first();
+        if (!$peserta) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Peserta tidak ditemukan.'
+            ], 403);
+        }
+
+        $absensi = Absensi::where('peserta_magang_id', $peserta->id)
+            ->orderBy('tanggal', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $absensi
+        ], 200);
+    }
 }
