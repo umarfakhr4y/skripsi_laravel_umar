@@ -123,7 +123,7 @@ class UserSeeder extends Seeder
                     'periode_masuk' => '2026-01-01',
                     'periode_keluar' => '2026-07-01',
                     'no_telpon' => $data['no_telpon'],
-                    'status' => 'Aktif',
+                    'status' => true,
                     'alamat' => 'Jakarta',
                 ]);
             }
