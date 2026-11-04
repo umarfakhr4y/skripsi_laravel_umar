@@ -49,6 +49,10 @@ class PenugasanController extends Controller
                     'id' => $item->peserta->id ?? null,
                     'nama_lengkap' => $item->peserta->nama_lengkap ?? 'Unknown',
                     'nim' => $item->peserta->nim ?? '-',
+                    'profile_picture' => $item->peserta->profile_picture ?? ($item->peserta && $item->peserta->user ? $item->peserta->user->profile_picture : null),
+                    'profile_picture_url' => ($item->peserta && ($item->peserta->profile_picture || ($item->peserta->user && $item->peserta->user->profile_picture)))
+                        ? asset('storage/' . ($item->peserta->profile_picture ?: $item->peserta->user->profile_picture))
+                        : null,
                 ]
             ];
         });
