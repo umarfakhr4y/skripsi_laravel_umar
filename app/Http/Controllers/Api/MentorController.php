@@ -145,7 +145,10 @@ class MentorController extends Controller
             'status' => $peserta->status,
             'alamat' => $peserta->alamat,
             'email' => $peserta->user ? $peserta->user->email : null,
-            'profile_picture_url' => $peserta->profile_picture ? asset('storage/' . $peserta->profile_picture) : null,
+            'profile_picture' => $peserta->profile_picture ?? ($peserta->user ? $peserta->user->profile_picture : null),
+            'profile_picture_url' => ($peserta->profile_picture || ($peserta->user && $peserta->user->profile_picture))
+                ? asset('storage/' . ($peserta->profile_picture ?: $peserta->user->profile_picture))
+                : null,
             'tugas' => $tugas,
             'rekap_absensi' => $rekapAbsensi
         ];
