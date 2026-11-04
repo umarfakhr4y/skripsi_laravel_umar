@@ -65,7 +65,10 @@ class MentorController extends Controller
                 'nama_lengkap' => $p->nama_lengkap,
                 'nim' => $p->nim,
                 'email' => $p->user ? $p->user->email : null,
-                'profile_picture_url' => $p->profile_picture ? asset('storage/' . $p->profile_picture) : null,
+                'profile_picture' => $p->profile_picture ?? ($p->user ? $p->user->profile_picture : null),
+                'profile_picture_url' => ($p->profile_picture || ($p->user && $p->user->profile_picture))
+                    ? asset('storage/' . ($p->profile_picture ?: $p->user->profile_picture))
+                    : null,
                 'sudah_absen_masuk' => $absensi_hari_ini ? true : false,
                 'sudah_absen_pulang' => ($absensi_hari_ini && $absensi_hari_ini->waktu_keluar) ? true : false,
                 'absen_hari_ini' => $absensi_hari_ini,
